@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Iniciar Sesión - SiteX{% endblock %}
+{% block title %}Iniciar Sesión - Hayuelos{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -10,8 +10,8 @@
                 <div class="card-body p-5">
                     <div class="text-center mb-4">
                         <i class="bi bi-fuel-pump display-4 text-primary"></i>
-                        <h3 class="mt-2">SiteX</h3>
-                        <p class="text-muted">Sistema de Gestión de Combustible</p>
+                        <h3 class="mt-2" style="color: var(--hayuelos-rojo);">Hayuelos</h3>
+                        <p class="text-muted"><em>"Y También vendemos combustible"</em></p>
                     </div>
                     
                     <form method="POST">
@@ -55,9 +55,10 @@
                     
                     <hr class="my-4">
                     <div class="text-center text-muted small">
-                        <p><strong>Usuario de prueba:</strong></p>
-                        <p>Usuario: <code>admin</code></p>
-                        <p>Contraseña: <code>admin123</code></p>
+                        <p><strong>Usuarios de prueba:</strong></p>
+                        <p><strong>Administrador:</strong> <code>admin</code> / <code>admin123</code></p>
+                        <p><strong>Islero:</strong> <code>islero</code> / <code>islero123</code></p>
+                        <p><strong>Encargado:</strong> <code>encargado</code> / <code>encargado123</code></p>
                     </div>
                 </div>
             </div>
@@ -67,7 +68,7 @@
 
 <style>
 body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--hayuelos-negro) 0%, var(--hayuelos-rojo) 50%, var(--hayuelos-azul) 100%);
     min-height: 100vh;
     display: flex;
     align-items: center;
@@ -75,12 +76,19 @@ body {
 }
 
 .card {
-    border: none;
-    border-radius: 15px;
+    border: 3px solid var(--hayuelos-azul);
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 225, 225, 0.3);
 }
 
 .container {
     padding: 2rem 0;
+}
+
+h3 {
+    font-family: 'Century Gothic', sans-serif;
+    font-weight: 700;
+    font-style: italic;
 }
 </style>
 {% endblock %}

@@ -6,6 +6,7 @@ import bcrypt
 from app_factory import db
 from models import Empleado, Tanque, Descargue, RegistroMedida, MedicionCargue, PedidoCombustible, Venta
 from forms import LoginForm, DescargueForm, MedicionForm, EmpleadoForm
+from utils import roles_required, islero_required, admin_or_encargado_required
 
 # Blueprint definitions
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
@@ -96,17 +97,15 @@ def tanques():
 
 @dashboard_bp.route('/empleados')
 @login_required
+@admin_or_encargado_required
 def empleados():
-    if current_user.rol not in ['admin', 'encargado']:
-        flash('No tiene permisos para acceder a esta sección', 'error')
-        return redirect(url_for('dashboard.index'))
-    
     empleados = Empleado.query.all()
     return render_template('dashboard/empleados.html', empleados=empleados)
 
-# Medicion routes
+# Medicion routes - Solo isleros pueden registrar mediciones
 @medicion_bp.route('/registro', methods=['GET', 'POST'])
 @login_required
+@islero_required
 def registro():
     form = MedicionForm()
     tanques = Tanque.query.all()
@@ -140,6 +139,7 @@ def historial():
 
 @medicion_bp.route('/descargue', methods=['GET', 'POST'])
 @login_required
+@islero_required
 def descargue():
     form = DescargueForm()
     

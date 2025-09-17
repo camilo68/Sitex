@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}SiteX - Sistema de Gestión de Combustible{% endblock %}</title>
+    <title>{% block title %}Hayuelos Estación de Servicios{% endblock %}</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -20,7 +20,7 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container-fluid">
             <a class="navbar-brand" href="{{ url_for('dashboard.index') }}">
-                <i class="bi bi-fuel-pump"></i> SiteX
+                <i class="bi bi-fuel-pump"></i> Hayuelos
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -44,10 +44,12 @@
                             <i class="bi bi-clipboard-data"></i> Mediciones
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="{{ url_for('medicion.registro') }}">Registrar Medición</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('medicion.historial') }}">Historial</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="{{ url_for('medicion.descargue') }}">Registrar Descargue</a></li>
+                            {% if current_user.rol == 'islero' %}
+                                <li><a class="dropdown-item" href="{{ url_for('medicion.registro') }}">Registrar Medición</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('medicion.descargue') }}">Registrar Descargue</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            {% endif %}
+                            <li><a class="dropdown-item" href="{{ url_for('medicion.historial') }}">Historial Mediciones</a></li>
                             <li><a class="dropdown-item" href="{{ url_for('medicion.historial_descargues') }}">Historial Descargues</a></li>
                         </ul>
                     </li>
@@ -102,7 +104,7 @@
     {% if current_user.is_authenticated %}
     <footer class="bg-light text-center text-muted py-3 mt-5">
         <div class="container">
-            <small>&copy; 2025 SiteX - Sistema de Gestión de Combustible. Todos los derechos reservados.</small>
+            <small>&copy; 2025 Hayuelos Estación de Servicios - "Y También vendemos combustible". Todos los derechos reservados.</small>
         </div>
     </footer>
     {% endif %}

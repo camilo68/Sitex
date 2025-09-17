@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - SiteX{% endblock %}
+{% block title %}Dashboard - Hayuelos{% endblock %}
 
 {% block content %}
 <div class="container-fluid">
@@ -156,15 +156,22 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-2">
-                        <a href="{{ url_for('medicion.registro') }}" class="btn btn-primary">
-                            <i class="bi bi-plus-circle"></i> Nueva Medición
-                        </a>
-                        <a href="{{ url_for('medicion.descargue') }}" class="btn btn-success">
-                            <i class="bi bi-truck"></i> Registrar Descargue
-                        </a>
+                        {% if current_user.rol == 'islero' %}
+                            <a href="{{ url_for('medicion.registro') }}" class="btn btn-primary">
+                                <i class="bi bi-plus-circle"></i> Nueva Medición
+                            </a>
+                            <a href="{{ url_for('medicion.descargue') }}" class="btn btn-success">
+                                <i class="bi bi-truck"></i> Registrar Descargue
+                            </a>
+                        {% endif %}
                         <a href="{{ url_for('dashboard.tanques') }}" class="btn btn-info">
                             <i class="bi bi-circle"></i> Ver Tanques
                         </a>
+                        {% if current_user.rol in ['admin', 'encargado'] %}
+                            <a href="{{ url_for('dashboard.empleados') }}" class="btn btn-secondary">
+                                <i class="bi bi-people"></i> Empleados
+                            </a>
+                        {% endif %}
                     </div>
                 </div>
             </div>
