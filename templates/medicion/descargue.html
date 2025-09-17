@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar Descargue - SiteX{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-10">
+            <div class="card shadow">
+                <div class="card-header">
+                    <h5 class="m-0">
+                        <i class="bi bi-truck"></i> Registrar Descargue de Combustible
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary"><i class="bi bi-info-circle"></i> Información Básica</h6>
+                                <hr>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                {{ form.tanque.label(class="form-label") }}
+                                {{ form.tanque(class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ form.fecha.label(class="form-label") }}
+                                {{ form.fecha(class="form-control") }}
+                            </div>
+                        </div>
+                        
+                        <!-- Measurements -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary"><i class="bi bi-rulers"></i> Mediciones</h6>
+                                <hr>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info text-white">
+                                        <h6 class="m-0">Medidas Iniciales</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            {{ form.medida_inicial_cm.label(class="form-label") }}
+                                            {{ form.medida_inicial_cm(class="form-control") }}
+                                        </div>
+                                        <div class="mb-3">
+                                            {{ form.medida_inicial_gl.label(class="form-label") }}
+                                            {{ form.medida_inicial_gl(class="form-control") }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="card border-warning">
+                                    <div class="card-header bg-warning text-dark">
+                                        <h6 class="m-0">Medidas Finales</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            {{ form.medida_final_cm.label(class="form-label") }}
+                                            {{ form.medida_final_cm(class="form-control") }}
+                                        </div>
+                                        <div class="mb-3">
+                                            {{ form.medida_final_gl.label(class="form-label") }}
+                                            {{ form.medida_final_gl(class="form-control") }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3">
+                            <div class="col-md-4 mb-3">
+                                {{ form.descargue_cm.label(class="form-label") }}
+                                {{ form.descargue_cm(class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ form.descargue_gl.label(class="form-label") }}
+                                {{ form.descargue_gl(class="form-control") }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                {{ form.diferencia.label(class="form-label") }}
+                                {{ form.diferencia(class="form-control") }}
+                            </div>
+                        </div>
+                        
+                        <!-- Safety Equipment -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary"><i class="bi bi-shield-check"></i> Equipos de Seguridad</h6>
+                                <hr>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.kit_derrames(class="form-check-input") }}
+                                    {{ form.kit_derrames.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.extintores(class="form-check-input") }}
+                                    {{ form.extintores.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.conos(class="form-check-input") }}
+                                    {{ form.conos.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.boquillas(class="form-check-input") }}
+                                    {{ form.boquillas.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.botas(class="form-check-input") }}
+                                    {{ form.botas.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.gafas(class="form-check-input") }}
+                                    {{ form.gafas.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.tapaoidos(class="form-check-input") }}
+                                    {{ form.tapaoidos.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <div class="form-check">
+                                    {{ form.guantes(class="form-check-input") }}
+                                    {{ form.guantes.label(class="form-check-label") }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Observations -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h6 class="text-primary"><i class="bi bi-chat-text"></i> Observaciones</h6>
+                                <hr>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.observaciones1.label(class="form-label") }}
+                                {{ form.observaciones1(class="form-control", rows="3") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.observaciones2.label(class="form-label") }}
+                                {{ form.observaciones2(class="form-control", rows="3") }}
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('medicion.historial_descargues') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Volver
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save"></i> Registrar Descargue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

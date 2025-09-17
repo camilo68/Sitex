@@ -1,0 +1,38 @@
+/* Custom styles for SiteX */
+
+.navbar-brand {
+    font-weight: bold;
+}
+
+.card {
+    border-radius: 10px;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.progress {
+    border-radius: 10px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+/* Login page specific styles are in the template */
+
+/* Dashboard cards */
+.card.shadow {
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+/* Table styles */
+.table {
+    border-radius: 8px;
+}
+
+/* Alert styles */
+.alert {
+    border-radius: 8px;
+}
