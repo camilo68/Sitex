@@ -24,6 +24,8 @@
                             <th>Cargo</th>
                             <th>Rol</th>
                             <th>Estado</th>
+                            <th>Contraseña</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -34,15 +36,17 @@
                             <td>{{ empleado.tipo_documento }} {{ empleado.numero_documento }}</td>
                             <td>{{ empleado.email or 'N/A' }}</td>
                             <td>
-                                <span class="badge bg-info">{{ empleado.cargo_establecido|title }}</span>
+                                <span class="badge bg-info">{{ empleado.cargo_establecido|title if empleado.cargo_establecido else 'N/A' }}</span>
                             </td>
                             <td>
                                 {% if empleado.rol == 'admin' %}
                                     <span class="badge bg-danger">Administrador</span>
                                 {% elif empleado.rol == 'encargado' %}
                                     <span class="badge bg-warning">Encargado</span>
+                                {% elif empleado.rol == 'islero' %}
+                                    <span class="badge bg-primary">Islero</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">Usuario</span>
+                                    <span class="badge bg-secondary">Pendiente</span>
                                 {% endif %}
                             </td>
                             <td>
@@ -51,6 +55,18 @@
                                 {% else %}
                                     <span class="badge bg-warning">Pendiente</span>
                                 {% endif %}
+                            </td>
+                            <td>
+                                {% if empleado.temporal %}
+                                    <span class="badge bg-danger">Temporal</span>
+                                {% else %}
+                                    <span class="badge bg-success">Definitiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('auth.reset_password', empleado_id=empleado.idEmpleados) }}">
+                                    <button type="submit" class="btn btn-sm btn-warning">Resetear Clave</button>
+                                </form>
                             </td>
                         </tr>
                         {% endfor %}
