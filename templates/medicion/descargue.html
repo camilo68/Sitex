@@ -1,0 +1,221 @@
+<!-- templates/medicion/descargue.html - MEJORADO CON CONVERSIÓN -->
+{% extends "base.html" %}
+
+{% block title %}Registrar Descargue - Hayuelos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-truck"></i> Registrar Descargue
+        </h1>
+        <a href="{{ url_for('medicion.historial_descargues') }}" class="btn btn-outline-success">
+            <i class="bi bi-clock-history"></i> Ver Historial
+        </a>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            <form method="post">
+                {{ form.hidden_tag() }}
+                
+                <!-- Información básica -->
+                <h5 class="mb-3">Información del Descargue</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.tanque.label(class="form-label") }}
+                            {{ form.tanque(class="form-control") }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.fecha.label(class="form-label") }}
+                            {{ form.fecha(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mediciones -->
+                <h5 class="mb-3">Mediciones</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.medida_inicial_cm.label(class="form-label") }}
+                            {{ form.medida_inicial_cm(class="form-control", id="medida_inicial_cm") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.medida_inicial_gl.label(class="form-label") }}
+                            {{ form.medida_inicial_gl(class="form-control", id="medida_inicial_gl", readonly=true) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.descargue_cm.label(class="form-label") }}
+                            {{ form.descargue_cm(class="form-control", id="descargue_cm") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.descargue_gl.label(class="form-label") }}
+                            {{ form.descargue_gl(class="form-control", id="descargue_gl", readonly=true) }}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            {{ form.medida_final_cm.label(class="form-label") }}
+                            {{ form.medida_final_cm(class="form-control", id="medida_final_cm", readonly=true) }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.medida_final_gl.label(class="form-label") }}
+                            {{ form.medida_final_gl(class="form-control", id="medida_final_gl", readonly=true) }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    {{ form.diferencia.label(class="form-label") }}
+                    {{ form.diferencia(class="form-control", id="diferencia", readonly=true) }}
+                </div>
+
+                <!-- Equipo de seguridad -->
+                <h5 class="mb-3">Equipo de Seguridad</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.kit_derrames.label(class="form-label") }}
+                            {{ form.kit_derrames(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.extintores.label(class="form-label") }}
+                            {{ form.extintores(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.conos.label(class="form-label") }}
+                            {{ form.conos(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.boquillas.label(class="form-label") }}
+                            {{ form.boquillas(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.botas.label(class="form-label") }}
+                            {{ form.botas(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.gafas.label(class="form-label") }}
+                            {{ form.gafas(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.tapaoidos.label(class="form-label") }}
+                            {{ form.tapaoidos(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.guantes.label(class="form-label") }}
+                            {{ form.guantes(class="form-select") }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Calidad del combustible -->
+                <h5 class="mb-3">Calidad del Combustible</h5>
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.brillante.label(class="form-label") }}
+                            {{ form.brillante(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.traslucido.label(class="form-label") }}
+                            {{ form.traslucido(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="mb-3">
+                            {{ form.claro.label(class="form-label") }}
+                            {{ form.claro(class="form-select") }}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.solidos.label(class="form-label") }}
+                            {{ form.solidos(class="form-select") }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.separacion.label(class="form-label") }}
+                            {{ form.separacion(class="form-control") }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Observaciones -->
+                <h5 class="mb-3">Observaciones</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.observaciones1.label(class="form-label") }}
+                            {{ form.observaciones1(class="form-control", rows="3") }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.observaciones2.label(class="form-label") }}
+                            {{ form.observaciones2(class="form-control", rows="3") }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Registrar Descargue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Script para conversión automática cm → galones -->
+<script>
+  // Radio del tanque en cm (ajusta según dimensiones reales)
+  const r_cm = 50;
+  // Constante: galones por cada cm de altura
+  const FACTOR = Math.PI * r_cm * r_cm / 3785.411784;
+
+  function cmToGallons(h_cm) {
+    const h = parseFloat(h_cm);
+    if (isNaN(h) || h < 0) return 0;
+    return FACTOR * h;
+  }
+
+  function actualizarValores() {
+    const inicial_cm = parseFloat(document.getElementById('medida_inicial_cm').value) || 0;
+    const descargue_cm = parseFloat(document.getElementById('descargue_cm').value) || 0;
+
+    // medida final = inicial + descargue
+    const final_cm = inicial_cm + descargue_cm;
+
+    // conversiones
+    const inicial_gl = cmToGallons(inicial_cm);
+    const descargue_gl = cmToGallons(descargue_cm);
+    const final_gl = cmToGallons(final_cm);
+
+    // actualizar inputs
+    document.getElementById('medida_inicial_gl').value = inicial_gl.toFixed(2);
+    document.getElementById('descargue_gl').value = descargue_gl.toFixed(2);
+    document.getElementById('medida_final_cm').value = final_cm.toFixed(2);
+    document.getElementById('medida_final_gl').value = final_gl.toFixed(2);
+
+    // diferencia = inicial_gl - final_gl
+    document.getElementById('diferencia').value = (inicial_gl - final_gl).toFixed(2);
+  }
+
+  document.getElementById('medida_inicial_cm').addEventListener('input', actualizarValores);
+  document.getElementById('descargue_cm').addEventListener('input', actualizarValores);
+</script>
+{% endblock %}
