@@ -1,0 +1,17 @@
+# pyproject.toml - CORREGIDO
+[project]
+name = "repl-nix-workspace"
+version = "0.1.0"
+description = "Sistema de gestión de combustible Hayuelos"
+requires-python = ">=3.11"
+dependencies = [
+    "bcrypt>=4.3.0",
+    "flask>=3.0.0",
+    "flask-login>=0.6.3",
+    "flask-migrate>=4.1.0",
+    "flask-sqlalchemy>=3.1.1",
+    "flask-wtf>=1.2.2",
+    "pymysql>=1.1.0",
+    "python-dotenv>=1.1.1",
+    "wtforms>=3.1.0",
+]

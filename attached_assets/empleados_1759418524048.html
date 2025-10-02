@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="text-accent">Gestión de Empleados</h2>
+<form method="post">
+  {{ form.hidden_tag() }}
+  <div class="row">
+    <div class="col">{{ form.nombre_empleado.label }} {{ form.nombre_empleado(class="form-control") }}</div>
+    <div class="col">{{ form.apellido_empleado.label }} {{ form.apellido_empleado(class="form-control") }}</div>
+  </div>
+  <div class="row">
+    <div class="col">{{ form.numero_documento.label }} {{ form.numero_documento(class="form-control") }}</div>
+    <div class="col">{{ form.rol.label }} {{ form.rol(class="form-select") }}</div>
+  </div>
+  <div class="mt-2"><button class="btn btn-tx" type="submit">Crear usuario</button></div>
+</form>
+<hr>
+<h3>Lista de empleados</h3>
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nombre</th>
+      <th>Documento</th>
+      <th>Rol</th>
+      <th>Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for e in empleados %}
+    <tr>
+      <td>{{ e.idEmpleados }}</td>
+      <td>{{ e.nombre_empleado }} {{ e.apellido_empleado }}</td>
+      <td>{{ e.numero_documento }}</td>
+      <td>{{ e.rol }}</td>
+      <td>
+        <form method="POST" action="{{ url_for('auth.reset_password', empleado_id=e.idEmpleados) }}">
+          {{ reset_form.hidden_tag() }}
+          {{ reset_form.submit(class="btn btn-warning btn-sm") }}
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

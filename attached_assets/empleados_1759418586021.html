@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Empleados - Hayuelos{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-people"></i> Gestión de Empleados
+        </h1>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-body">
+            {% if empleados %}
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre Completo</th>
+                            <th>Documento</th>
+                            <th>Email</th>
+                            <th>Cargo</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                            <th>Contraseña</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for empleado in empleados %}
+                        <tr>
+                            <td>{{ empleado.idEmpleados }}</td>
+                            <td>{{ empleado.nombre_empleado }} {{ empleado.apellido_empleado }}</td>
+                            <td>{{ empleado.tipo_documento }} {{ empleado.numero_documento }}</td>
+                            <td>{{ empleado.email or 'N/A' }}</td>
+                            <td>
+                                <span class="badge bg-info">{{ empleado.cargo_establecido|title if empleado.cargo_establecido else 'N/A' }}</span>
+                            </td>
+                            <td>
+                                {% if empleado.rol == 'admin' %}
+                                    <span class="badge bg-danger">Administrador</span>
+                                {% elif empleado.rol == 'encargado' %}
+                                    <span class="badge bg-warning">Encargado</span>
+                                {% elif empleado.rol == 'islero' %}
+                                    <span class="badge bg-primary">Islero</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if empleado.confirmado %}
+                                    <span class="badge bg-success">Activo</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if empleado.temporal %}
+                                    <span class="badge bg-danger">Temporal</span>
+                                {% else %}
+                                    <span class="badge bg-success">Definitiva</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" action="{{ url_for('auth.reset_password', empleado_id=empleado.idEmpleados) }}">
+                                    <button type="submit" class="btn btn-sm btn-warning">Resetear Clave</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-people display-1 text-muted"></i>
+                <h4 class="mt-3">No hay empleados registrados</h4>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

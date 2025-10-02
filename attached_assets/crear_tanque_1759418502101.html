@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block title %}Crear Tanque - Hayuelos{% endblock %}
+
+{% block content %}
+<h2>Crear Nuevo Tanque</h2>
+<form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.tipo_combustible.label }} {{ form.tipo_combustible(class="form-control") }}
+    {{ form.capacidad.label }} {{ form.capacidad(class="form-control") }}
+    {{ form.submit(class="btn btn-primary") }}
+</form>
+{% endblock %}

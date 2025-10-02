@@ -1,0 +1,9 @@
+
+{% extends "base.html" %}
+{% block content %}
+<h1 class="text-accent">Panel Islero</h1>
+<ul>
+  <li><a href="{{ url_for('dashboard.registro_medicion') }}">Medición rutinaria</a></li>
+  <li><a href="{{ url_for('dashboard.registrar_descargue') }}">Registro de descargue</a></li>
+</ul>
+{% endblock %}
