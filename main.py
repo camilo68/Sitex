@@ -1,9 +1,10 @@
 # main.py - CORREGIDO
 from app_factory import create_app
 
+app = create_app() 
 if __name__ == "__main__":
-    app = create_app()
     app.run(debug=True)
+
 
 # from flask import Flask, jsonify
 # from flask_cors import CORS
