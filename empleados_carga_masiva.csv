@@ -1,0 +1,5 @@
+nombre_empleado,apellido_empleado,numero_documento,tipo_documento,email,telefono,direccion,cargo_establecido,usuario,contrasena,temporal,activo,aceptado_terminos
+Juan,Pérez,12345678,CC,juan.perez@hayuelos.com,3001234567,Calle 1 #2-3,Islero,jperez,Temp123!,True,True,False
+María,Gómez,87654321,CC,maria.gomez@hayuelos.com,3109876543,Carrera 4 #5-6,Islero,mgomez,Temp456!,True,True,False
+Carlos,Rodríguez,11223344,CC,carlos.rodriguez@hayuelos.com,3201122334,Transversal 7 #8-9,Islero,crodriguez,Temp789!,True,True,False
+Ana,López,99887766,CC,ana.lopez@hayuelos.com,3159988776,Diagonal 10 #11-12,Islero,alopez,Temp000!,True,True,False

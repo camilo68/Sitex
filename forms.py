@@ -43,7 +43,12 @@ class RegisterForm(FlaskForm):
 class MedicionForm(FlaskForm):
     medida_combustible = StringField('Medida (cm) *', validators=[DataRequired(message="Campo obligatorio")],
                                     render_kw={"placeholder": "Medida en cm"})
-    galones = IntegerField('Galones *', validators=[DataRequired(message="Campo obligatorio"), NumberRange(min=0, message="Debe ser positivo")])
+    galones = DecimalField(
+    'Galones', 
+    validators=[Optional()],  # Ya que se calcula con JS
+    places=2,
+    render_kw={"readonly": True, "id": "galones"}
+)
     tanque = SelectField('Tanque *', coerce=int, validators=[DataRequired(message="Campo obligatorio")])
     tipo_medida = SelectField('Tipo de Medición *',
                              choices=[('rutinario', 'Rutinario'), ('cargue', 'Cargue'), ('descargue', 'Descargue')],

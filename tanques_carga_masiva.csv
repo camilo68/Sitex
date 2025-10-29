@@ -1,0 +1,5 @@
+tipo_combustible,capacidad,activo
+Diesel,8000,True
+ACPM,10000,True
+Extra,5000,True
+Corriente,7000,False

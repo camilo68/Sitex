@@ -236,6 +236,25 @@ def reset_password_admin(empleado_id):
     flash(f"Contraseña restablecida para {empleado.nombre_empleado}. Nueva contraseña: {contrasena_temporal}", "success")
     return redirect(url_for("dashboard.empleados"))
 
+@auth_bp.route("/resetear-clave/<int:empleado_id>", methods=["POST"])
+@login_required
+@admin_required
+def resetear_clave_empleado(empleado_id):
+    empleado = Empleado.query.get_or_404(empleado_id)
+    
+    # Contraseña temporal = últimos 4 dígitos del documento
+    temp_password = empleado.numero_documento[-4:] if len(empleado.numero_documento) >= 4 else empleado.numero_documento
+    hashed = bcrypt.hashpw(temp_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    
+    empleado.contrasena = hashed
+    empleado.temporal = True
+    db.session.commit()
+    
+    flash(f'Contraseña reseteada para {empleado.usuario}. Nueva: {temp_password}', 'warning')
+    registrar_auditoria('reset_password', 'empleado', empleado.id_empleados, None, {'temporal': True})
+    
+    return redirect(url_for('dashboard.empleados'))
+
 # ============= MAIN ROUTES =============
 @main_bp.route("/")
 def home():
@@ -472,54 +491,185 @@ def carga_masiva():
         file = form.archivo.data
         tipo_carga = form.tipo_carga.data
         
-        if file and allowed_file(file.filename, {'csv', 'xlsx', 'xls'}):
-            try:
-                # Leer archivo
-                if file.filename.endswith('.csv'):
-                    df = pd.read_csv(file)
-                else:
-                    df = pd.read_excel(file)
+        if not file or not allowed_file(file.filename, {'csv', 'xlsx', 'xls'}):
+            flash("Archivo inválido", "danger")
+            return redirect(request.url)
+
+        try:
+            # === LEER CSV ===
+            if file.filename.lower().endswith('.csv'):
+                df = pd.read_csv(file, sep=',', decimal='.', encoding='utf-8-sig')
+            else:
+                df = pd.read_excel(file)
+            
+            df = df.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+            df.replace({"True": True, "False": False}, inplace=True, regex=True)
+
+            count = 0
+            errors = []
+
+            # === MEDICIONES ===
+            if tipo_carga == 'mediciones':
+                required = ['tanque_id', 'medida_combustible', 'galones', 'tipo_medida', 'novedad', 'fecha_hora_registro', 'empleado_id']
+                if not all(col in df.columns for col in required):
+                    flash(f"Columnas requeridas: {', '.join(required)}", "danger")
+                    return redirect(request.url)
                 
-                count = 0
-                if tipo_carga == 'empleados':
-                    for _, row in df.iterrows():
-                        if not Empleado.query.filter_by(numero_documento=row['numero_documento']).first():
-                            hash_pwd = bcrypt.hashpw(str(row['numero_documento'])[-4:].encode(), bcrypt.gensalt()).decode()
-                            empleado = Empleado(
-                                nombre_empleado=row['nombre'],
-                                apellido_empleado=row['apellido'],
-                                numero_documento=row['numero_documento'],
-                                tipo_documento=row.get('tipo_documento', 'CC'),
-                                email=row['email'],
-                                telefono=row.get('telefono', ''),
-                                direccion=row.get('direccion', ''),
-                                cargo_establecido=row.get('cargo', 'islero'),
-                                usuario=row['usuario'],
-                                contrasena=hash_pwd,
-                                activo=True
-                            )
-                            db.session.add(empleado)
-                            count += 1
+                for idx, row in df.iterrows():
+                    try:
+                        tanque_id = int(row['tanque_id'])
+                        empleado_id = int(row['empleado_id'])
+                        tanque = Tanque.query.get(tanque_id)
+                        empleado = Empleado.query.get(empleado_id)
+                        
+                        if not tanque:
+                            errors.append(f"Fila {idx+2}: tanque_id {tanque_id} no existe")
+                            continue
+                        if not empleado:
+                            errors.append(f"Fila {idx+2}: empleado_id {empleado_id} no existe")
+                            continue
+                        
+                        medida = float(row['medida_combustible'])
+                        galones = float(row['galones'])
+                        fecha = datetime.strptime(str(row['fecha_hora_registro']), '%Y-%m-%d %H:%M:%S')
+                        
+                        medicion = RegistroMedida(
+                            id_tanques=tanque.id_tanques,
+                            id_empleados=empleado.id_empleados,
+                            medida_combustible=medida,
+                            galones=galones,
+                            tipo_medida=row['tipo_medida'],
+                            novedad=row.get('novedad', ''),
+                            fecha_hora_registro=fecha
+                        )
+                        db.session.add(medicion)
+                        count += 1
+                    except Exception as e:
+                        errors.append(f"Fila {idx+2}: {str(e)}")
+
+            # === EMPLEADOS ===
+            if tipo_carga == 'empleados':
+                required = ['nombre_empleado', 'apellido_empleado', 'numero_documento', 'email', 'usuario']
+                if not all(col in df.columns for col in required):
+                    flash(f"Faltan columnas: {', '.join(required)}", "danger")
+                    return redirect(request.url)
                 
-                elif tipo_carga == 'tanques':
-                    for _, row in df.iterrows():
+                for idx, row in df.iterrows():
+                    if Empleado.query.filter_by(numero_documento=row['numero_documento']).first():
+                        errors.append(f"Fila {idx+2}: Documento duplicado")
+                        continue
+                    if Empleado.query.filter_by(usuario=row['usuario']).first():
+                        errors.append(f"Fila {idx+2}: Usuario duplicado")
+                        continue
+                    
+                    temp_pass = str(row['numero_documento'])[-4:]
+                    hash_pwd = bcrypt.hashpw(temp_pass.encode(), bcrypt.gensalt()).decode()
+                    
+                    empleado = Empleado(
+                        nombre_empleado=row['nombre_empleado'],
+                        apellido_empleado=row['apellido_empleado'],
+                        numero_documento=row['numero_documento'],
+                        tipo_documento=row.get('tipo_documento', 'CC'),
+                        email=row['email'],
+                        telefono=row.get('telefono', ''),
+                        direccion=row.get('direccion', ''),
+                        cargo_establecido=row.get('cargo_establecido', 'Islero'),
+                        usuario=row['usuario'],
+                        contrasena=hash_pwd,
+                        temporal=True,
+                        activo=row.get('activo', True),
+                        aceptado_terminos=row.get('aceptado_terminos', False)
+                    )
+                    db.session.add(empleado)
+                    count += 1
+
+            # === TANQUES ===
+            elif tipo_carga == 'tanques':
+                required = ['tipo_combustible', 'capacidad']
+                if not all(col in df.columns for col in required):
+                    flash("Faltan columnas: tipo_combustible, capacidad", "danger")
+                    return redirect(request.url)
+                
+                for idx, row in df.iterrows():
+                    try:
+                        capacidad = int(float(str(row['capacidad']).replace(',', '.')))
                         tanque = Tanque(
                             tipo_combustible=row['tipo_combustible'],
-                            capacidad=int(row['capacidad']),
+                            capacidad=capacidad,
                             activo=row.get('activo', True)
                         )
                         db.session.add(tanque)
                         count += 1
-                
-                db.session.commit()
-                registrar_auditoria('CREATE_BULK', tipo_carga, None, None, {'count': count})
-                flash(f"Se cargaron {count} registros exitosamente", "success")
-                
-            except Exception as e:
-                flash(f"Error al procesar archivo: {str(e)}", "danger")
-    
-    return render_template("admin/carga_masiva.html", form=form)
+                    except Exception as e:
+                        errors.append(f"Fila {idx+2}: Capacidad inválida → {str(e)}")
 
+            # === MEDICIONES ===
+            elif tipo_carga == 'mediciones':
+                required = ['tanque_id', 'medida_combustible', 'galones', 'tipo_medida', 'fecha_hora_registro', 'empleado_id']
+                if not all(col in df.columns for col in required):
+                    flash("Faltan columnas en mediciones", "danger")
+                    return redirect(request.url)
+                
+                for idx, row in df.iterrows():
+                    try:
+                        # Validar IDs
+                        tanque_id = int(row['tanque_id'])
+                        empleado_id = int(row['empleado_id'])
+                        tanque = Tanque.query.get(tanque_id)
+                        empleado = Empleado.query.get(empleado_id)
+                        
+                        if not tanque:
+                            errors.append(f"Fila {idx+2}: tanque_id {tanque_id} no existe")
+                            continue
+                        if not empleado:
+                            errors.append(f"Fila {idx+2}: empleado_id {empleado_id} no existe")
+                            continue
+                        
+                        # Convertir números
+                        medida_str = str(row['medida_combustible']).replace(',', '.')
+                        galones_str = str(row['galones']).replace(',', '.')
+                        medida = float(medida_str)
+                        galones = float(galones_str)
+                        
+                        # Fecha
+                        fecha_str = str(row['fecha_hora_registro']).strip()
+                        try:
+                            fecha = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M:%S')
+                        except:
+                            fecha = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M')
+                        
+                        # Crear medición
+                        medicion = RegistroMedida(
+                            id_tanques=tanque.id_tanques,
+                            id_empleados=empleado.id_empleados,
+                            medida_combustible=medida,
+                            galones=galones,
+                            tipo_medida=row['tipo_medida'],
+                            novedad=row.get('novedad', ''),
+                            fecha_hora_registro=fecha
+                        )
+                        db.session.add(medicion)
+                        count += 1
+                    except Exception as e:
+                        errors.append(f"Fila {idx+2}: Error → {str(e)}")
+
+            # === COMMIT ===
+            db.session.commit()
+            registrar_auditoria('CREATE_BULK', tipo_carga, None, None, {'count': count})
+
+            msg = f"Se cargaron {count} registros exitosamente"
+            if errors:
+                error_sample = "; ".join(errors[:3])
+                flash(f"{msg}. Errores: {len(errors)} → {error_sample}", "warning")
+            else:
+                flash(msg, "success")
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f"Error crítico: {str(e)}", "danger")
+            print(f"[ERROR] {e}")  # Para debug en consola
+
+    return render_template("admin/carga_masiva.html", form=form)
 @admin_bp.route("/tanques/nuevo", methods=["GET", "POST"])
 @login_required
 @admin_or_encargado_required

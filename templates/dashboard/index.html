@@ -18,7 +18,7 @@
         </div>
     </div>
 
-    <!-- Statistics Cards -->
+        <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-xl-3 col-md-6 mb-4">
             <div class="card border-left-primary shadow h-100 py-2">
@@ -91,7 +91,23 @@
                 </div>
             </div>
         </div>
+
+        <!-- NUEVA TARJETA: Carga Masiva (solo visible para admins) -->
+        {% if current_user.rol == 'admin' %}
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body text-center">
+                    <i class="bi bi-upload fs-1 text-success"></i>
+                    <h6 class="mt-2 text-uppercase font-weight-bold">Carga Masiva</h6>
+                    <a href="{{ url_for('admin.carga_masiva') }}" class="btn btn-sm btn-success mt-2">
+                        Ir
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
+
 
     <!-- Tanques Overview -->
     <div class="row">
