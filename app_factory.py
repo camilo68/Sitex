@@ -1,41 +1,43 @@
-# app_factory.py - ACTUALIZADO CON MEJORAS DE SEGURIDAD
 import os
 from flask import Flask
 from extensions import db, login_manager, migrate, csrf, mail
 
 def create_app():
     app = Flask(__name__)
-    
-    # Configuración
+
+    # Configuración general
     app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'fallback-secret-key-change-in-production')
-    
-    # Base de datos - PostgreSQL de Replit
+
+    # Base de datos - MySQL en Railway o local
     database_url = os.environ.get('DATABASE_URL')
+
     if database_url:
+        # Asegurar compatibilidad con SQLAlchemy
+        if database_url.startswith("mysql://"):
+            database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
-        # Fallback a MySQL local para desarrollo
         app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost/sitex_prueba'
-    
+
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_recycle': 300,
         'pool_pre_ping': True,
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    
-    # Configuración de correo para recuperación de contraseña
+
+    # Configuración de correo
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = True
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@hayuelos.com')
-    
-    # Configuración de uploads
+
+    # Uploads
     app.config['UPLOAD_FOLDER'] = 'static/uploads'
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
     app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
-    
+
     # Inicializar extensiones
     db.init_app(app)
     login_manager.init_app(app)
