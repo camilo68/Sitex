@@ -1,3 +1,4 @@
+# app_factory.py
 import os
 from flask import Flask
 from extensions import db, login_manager, migrate, csrf, mail
@@ -8,11 +9,14 @@ def create_app():
     # Configuración general
     app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'fallback-secret-key-change-in-production')
 
-    # Base de datos - MySQL en Railway o local
+    # Base de datos - PostgreSQL (Railway) o MySQL local
     database_url = os.environ.get('DATABASE_URL')
 
     if database_url:
-        if database_url.startswith("mysql://"):
+        # Compatibilidad con SQLAlchemy
+        if database_url.startswith("postgres://"):
+            database_url = database_url.replace("postgres://", "postgresql+psycopg2://", 1)
+        elif database_url.startswith("mysql://"):
             database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
@@ -23,7 +27,6 @@ def create_app():
         'pool_pre_ping': True,
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 
     # Configuración de correo
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
@@ -55,7 +58,6 @@ def create_app():
     def load_user(user_id):
         from models import Empleado
         empleado = db.session.get(Empleado, int(user_id))
-        # Verificar si el usuario está activo
         if empleado and not empleado.activo:
             return None
         return empleado
@@ -71,16 +73,15 @@ def create_app():
     # Crear tablas y datos iniciales
     with app.app_context():
         db.create_all()
-        
-        from models import Empleado, Tanque
-        # Verificar si ya hay tanques
+        from models import Tanque
         if db.session.query(Tanque).count() == 0:
-            tanque1 = Tanque(tipo_combustible='Diesel', capacidad=6000, activo=True)
-            tanque2 = Tanque(tipo_combustible='Diesel', capacidad=12000, activo=True)
-            tanque3 = Tanque(tipo_combustible='ACPM', capacidad=12000, activo=True)
-            tanque4 = Tanque(tipo_combustible='Extra', capacidad=6000, activo=True)
-
-            db.session.add_all([tanque1, tanque2, tanque3, tanque4])
+            tanques = [
+                Tanque(tipo_combustible='Diesel', capacidad=6000, activo=True),
+                Tanque(tipo_combustible='Diesel', capacidad=12000, activo=True),
+                Tanque(tipo_combustible='ACPM', capacidad=12000, activo=True),
+                Tanque(tipo_combustible='Extra', capacidad=6000, activo=True)
+            ]
+            db.session.add_all(tanques)
             db.session.commit()
             print("✓ Tanques creados")
     
