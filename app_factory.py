@@ -12,7 +12,6 @@ def create_app():
     database_url = os.environ.get('DATABASE_URL')
 
     if database_url:
-        # Asegurar compatibilidad con SQLAlchemy
         if database_url.startswith("mysql://"):
             database_url = database_url.replace("mysql://", "mysql+pymysql://", 1)
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -24,6 +23,7 @@ def create_app():
         'pool_pre_ping': True,
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
 
     # Configuración de correo
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
