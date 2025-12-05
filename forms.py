@@ -41,47 +41,175 @@ class RegisterForm(FlaskForm):
     submit = SubmitField("Registrarse")
 
 class MedicionForm(FlaskForm):
-    medida_combustible = StringField('Medida (cm) *', validators=[DataRequired(message="Campo obligatorio")],
-                                    render_kw={"placeholder": "Medida en cm"})
-    galones = IntegerField('Galones *', validators=[DataRequired(message="Campo obligatorio"), NumberRange(min=0, message="Debe ser positivo")])
-    tanque = SelectField('Tanque *', coerce=int, validators=[DataRequired(message="Campo obligatorio")])
+    """Formulario de medición - SOLO RUTINARIO"""
+    medida_combustible = StringField('Medida (cm) *', 
+        validators=[DataRequired(message="Campo obligatorio")],
+        render_kw={"placeholder": "Medida en cm"})
+    
+    galones = DecimalField('Galones', 
+        validators=[Optional()],
+        places=2,
+        render_kw={"readonly": True, "id": "galones"})
+    
+    tanque = SelectField('Tanque *', 
+        coerce=int, 
+        validators=[DataRequired(message="Campo obligatorio")])
+    
+    # SOLO RUTINARIO - sin opciones de cargue/descargue
     tipo_medida = SelectField('Tipo de Medición *',
-                             choices=[('rutinario', 'Rutinario'), ('cargue', 'Cargue'), ('descargue', 'Descargue')],
-                             default='rutinario',
-                             validators=[DataRequired(message="Campo obligatorio")])
-    novedad = TextAreaField('Novedad', validators=[Optional(), Length(max=255)],
-                          render_kw={"placeholder": "Observaciones adicionales", "rows": 3})
-    imagen = FileField('Foto de Factura', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Solo imágenes o PDF')])
+        choices=[('rutinario', 'Rutinario')],  # Solo rutinario
+        default='rutinario',
+        validators=[DataRequired(message="Campo obligatorio")])
+    
+    novedad = TextAreaField('Novedad', 
+        validators=[Optional(), Length(max=255)],
+        render_kw={"placeholder": "Observaciones adicionales", "rows": 3})
+    
+    imagen = FileField('Foto de Factura', 
+        validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Solo imágenes o PDF')])
+    
     submit = SubmitField("Guardar Medición")
 
+
 class DescargueForm(FlaskForm):
-    tanque = StringField('Tanque *', validators=[DataRequired(message="Campo obligatorio"), Length(max=50)],
-                        render_kw={"placeholder": "Nombre del tanque"})
-    medida_inicial_cm = DecimalField('Medida Inicial (cm) *', validators=[DataRequired(message="Campo obligatorio")], places=2)
-    medida_inicial_gl = DecimalField('Medida Inicial (gl)', validators=[Optional()], places=2)
-    descargue_cm = DecimalField('Descargue (cm) *', validators=[DataRequired(message="Campo obligatorio")], places=2)
-    descargue_gl = DecimalField('Descargue (gl)', validators=[Optional()], places=2)
-    medida_final_cm = DecimalField('Medida Final (cm)', validators=[Optional()], places=2)
-    medida_final_gl = DecimalField('Medida Final (gl)', validators=[Optional()], places=2)
-    diferencia = DecimalField('Diferencia', validators=[Optional()], places=2)
-    kit_derrames = SelectField('Kit Derrames *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    extintores = SelectField('Extintores *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    conos = SelectField('Conos *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    boquillas = SelectField('Boquillas *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    botas = SelectField('Botas *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    gafas = SelectField('Gafas *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    tapaoidos = SelectField('Tapaoídos *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    guantes = SelectField('Guantes *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    brillante = SelectField('Brillante *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    traslucido = SelectField('Traslúcido *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    claro = SelectField('Claro *', choices=[('si', 'Sí'), ('no', 'No')], default='si')
-    solidos = SelectField('Sólidos *', choices=[('si', 'Sí'), ('no', 'No')], default='no')
-    separacion = StringField('Separación', validators=[Optional(), Length(max=50)])
-    observaciones1 = TextAreaField('Observaciones 1', validators=[Optional(), Length(max=255)])
-    observaciones2 = TextAreaField('Observaciones 2', validators=[Optional(), Length(max=255)])
-    fecha = DateField('Fecha', validators=[Optional()], default=date.today)
-    imagen = FileField('Foto de Factura', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Solo imágenes o PDF')])
+    """Formulario de descargue con selectores de tanque"""
+    tanque = SelectField('Tanque *',  # Cambiado a SelectField
+        coerce=int,
+        validators=[DataRequired(message="Campo obligatorio")])
+    
+    medida_inicial_cm = DecimalField('Medida Inicial (cm) *', 
+        validators=[DataRequired(message="Campo obligatorio")], 
+        places=2)
+    
+    medida_inicial_gl = DecimalField('Medida Inicial (gl)', 
+        validators=[Optional()], 
+        places=2)
+    
+    descargue_cm = DecimalField('Descargue (cm) *', 
+        validators=[DataRequired(message="Campo obligatorio")], 
+        places=2)
+    
+    descargue_gl = DecimalField('Descargue (gl)', 
+        validators=[Optional()], 
+        places=2)
+    
+    medida_final_cm = DecimalField('Medida Final (cm)', 
+        validators=[Optional()], 
+        places=2)
+    
+    medida_final_gl = DecimalField('Medida Final (gl)', 
+        validators=[Optional()], 
+        places=2)
+    
+    diferencia = DecimalField('Diferencia', 
+        validators=[Optional()], 
+        places=2)
+    
+    # Seguridad del conductor - checkboxes en el template
+    botas = SelectField('Botas *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    gafas = SelectField('Gafas *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    tapaoidos = SelectField('Tapaoídos *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    guantes = SelectField('Guantes *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    # Seguridad del vehículo
+    kit_derrames = SelectField('Kit Derrames *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    extintores = SelectField('Extintores *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    conos = SelectField('Conos *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    boquillas = SelectField('Boquillas *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    # Calidad del combustible con botones ON/OFF
+    brillante = SelectField('Brillante *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    traslucido = SelectField('Traslúcido *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    claro = SelectField('Claro *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='si')
+    
+    solidos = SelectField('Sólidos *', 
+        choices=[('si', 'Sí'), ('no', 'No')], 
+        default='no')
+    
+    separacion = StringField('Separación', 
+        validators=[Optional(), Length(max=50)])
+    
+    observaciones1 = TextAreaField('Observaciones 1', 
+        validators=[Optional(), Length(max=255)])
+    
+    observaciones2 = TextAreaField('Observaciones 2', 
+        validators=[Optional(), Length(max=255)])
+    
+    fecha = DateField('Fecha', 
+        validators=[Optional()], 
+        default=date.today)
+    
+    imagen = FileField('Foto de Factura', 
+        validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Solo imágenes o PDF')])
+    
     submit = SubmitField("Registrar Descargue")
+
+
+class CargueEmergenciaForm(FlaskForm):
+    """NUEVO: Formulario para cargue de emergencia"""
+    tanque = SelectField('Tanque *',
+        coerce=int,
+        validators=[DataRequired(message="Campo obligatorio")])
+    
+    medida_anterior = StringField('Medida Anterior (cm) *',
+        validators=[DataRequired(message="Campo obligatorio")],
+        render_kw={"placeholder": "Medida antes del cargue"})
+    
+    medida_posterior = StringField('Medida Posterior (cm) *',
+        validators=[DataRequired(message="Campo obligatorio")],
+        render_kw={"placeholder": "Medida después del cargue"})
+    
+    formato_entrega = SelectField('Formato de Entrega *',
+        choices=[
+            ('pipa', 'Pipa'),
+            ('camion', 'Camión'),
+            ('otro', 'Otro')
+        ],
+        validators=[DataRequired(message="Campo obligatorio")])
+    
+    galones_totales = DecimalField('Galones Totales *',
+        validators=[DataRequired(message="Campo obligatorio")],
+        places=2,
+        render_kw={"placeholder": "Total de galones cargados"})
+    
+    observaciones = TextAreaField('Observaciones',
+        validators=[Optional(), Length(max=255)],
+        render_kw={"rows": 3, "placeholder": "Detalles del cargue de emergencia"})
+    
+    imagen = FileField('Foto del Remito/Factura',
+        validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Solo imágenes o PDF')])
+    
+    submit = SubmitField("Registrar Cargue de Emergencia")
 
 class ChangePasswordForm(FlaskForm):
     current_password = PasswordField('Contraseña Actual *', validators=[DataRequired(message="Campo obligatorio")],

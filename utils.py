@@ -1,4 +1,4 @@
-# utils.py - ACTUALIZADO CON MEJORAS
+# utils.py - ACTUALIZADO CON PERMISOS MEJORADOS PARA ENCARGADO
 from functools import wraps
 from flask import flash, redirect, url_for
 from flask_login import current_user
@@ -29,18 +29,28 @@ def roles_required(*roles):
 
 
 def islero_or_encargado_required(f):
-    """Nuevo: Permite que islero Y encargado agreguen medidas"""
-    return roles_required('islero', 'encargado')(f)
+    """Permite que islero Y encargado registren medidas"""
+    return roles_required('islero', 'encargado', 'admin')(f)
 
 
 def admin_or_encargado_required(f):
-    """Decorador para admin o encargado"""
+    """Decorador para admin o encargado - AMBOS TIENEN PERMISOS COMPLETOS"""
     return roles_required('admin', 'encargado')(f)
 
 
 def admin_required(f):
-    """Decorador solo para admin"""
-    return roles_required('admin')(f)
+    """
+    Decorador solo para admin Y encargado
+    NOTA: Encargado tiene los mismos permisos que admin
+    """
+    return roles_required('admin', 'encargado')(f)
+
+
+def encargado_full_access(f):
+    """
+    Nuevo decorador: Encargado tiene acceso completo (admin + islero)
+    """
+    return roles_required('admin', 'encargado')(f)
 
 
 def registrar_auditoria(accion, tabla, registro_id, datos_anteriores=None, datos_nuevos=None):

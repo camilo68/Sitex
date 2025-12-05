@@ -91,7 +91,41 @@
                 </div>
             </div>
         </div>
+        
+        <!-- BOTONES DE ACCIÓN RÁPIDA PARA ADMIN Y ENCARGADO -->
+        {% if current_user.rol in ['admin', 'encargado'] %}
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body text-center">
+                    <i class="bi bi-upload fs-1 text-success"></i>
+                    <h6 class="mt-2 text-uppercase font-weight-bold">Carga Masiva</h6>
+                    <a href="{{ url_for('admin.carga_masiva') }}" class="btn btn-sm btn-success mt-2">
+                        <i class="bi bi-arrow-up-circle"></i> Ir
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+
+        <!-- NUEVO: Botón de Exportar Datos (admin y encargado) -->
+        {% if current_user.rol in ['admin', 'encargado'] %}
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body text-center">
+                    <i class="bi bi-file-earmark-arrow-down fs-1 text-info"></i>
+                    <h6 class="mt-2 text-uppercase font-weight-bold">Exportar Datos</h6>
+                    <p class="text-muted small mb-2">Excel / CSV</p>
+                    <a href="{{ url_for('admin.export_menu') }}" class="btn btn-sm btn-info mt-2">
+                        <i class="bi bi-download"></i> Ir
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
+
+    
 
     <!-- Tanques Overview -->
     <div class="row">
@@ -148,33 +182,43 @@
             </div>
 
             <!-- Quick Actions -->
-            <div class="card shadow mb-4">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="bi bi-lightning"></i> Acciones Rápidas
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        {% if current_user.rol == 'islero' %}
-                            <a href="{{ url_for('medicion.registro') }}" class="btn btn-primary">
-                                <i class="bi bi-plus-circle"></i> Nueva Medición
-                            </a>
-                            <a href="{{ url_for('medicion.descargue') }}" class="btn btn-success">
-                                <i class="bi bi-truck"></i> Registrar Descargue
-                            </a>
-                        {% endif %}
-                        <a href="{{ url_for('dashboard.tanques') }}" class="btn btn-info">
-                            <i class="bi bi-circle"></i> Ver Tanques
-                        </a>
-                        {% if current_user.rol in ['admin', 'encargado'] %}
-                            <a href="{{ url_for('dashboard.empleados') }}" class="btn btn-secondary">
-                                <i class="bi bi-people"></i> Empleados
-                            </a>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">
+            <i class="bi bi-lightning"></i> Acciones Rápidas
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="d-grid gap-2">
+            <!-- ENCARGADO PUEDE REGISTRAR MEDICIONES (como Islero) -->
+            {% if current_user.rol in ['islero', 'encargado'] %}
+                <a href="{{ url_for('medicion.registro') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Nueva Medición
+                </a>
+                <a href="{{ url_for('medicion.descargue') }}" class="btn btn-success">
+                    <i class="bi bi-truck"></i> Registrar Descargue
+                </a>
+            {% endif %}
+            
+            <a href="{{ url_for('dashboard.tanques') }}" class="btn btn-info">
+                <i class="bi bi-circle"></i> Ver Tanques
+            </a>
+            
+            <!-- ENCARGADO VE OPCIONES DE ADMIN -->
+            {% if current_user.rol in ['admin', 'encargado'] %}
+                <a href="{{ url_for('dashboard.empleados') }}" class="btn btn-secondary">
+                    <i class="bi bi-people"></i> Empleados
+                </a>
+                <a href="{{ url_for('admin.export_menu') }}" class="btn btn-outline-info">
+                    <i class="bi bi-download"></i> Exportar Datos
+                </a>
+                <a href="{{ url_for('admin.carga_masiva') }}" class="btn btn-outline-success">
+                    <i class="bi bi-upload"></i> Carga Masiva
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
         </div>
     </div>
 

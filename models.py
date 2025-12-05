@@ -1,6 +1,6 @@
-# models.py - ACTUALIZADO CON TODAS LAS MEJORAS
+# models.py - ACTUALIZADO CON CONFIRMACIÓN DE EMAIL
 from flask_login import UserMixin
-from datetime import datetime
+from datetime import datetime, timedelta
 import secrets
 from extensions import db
 
@@ -18,10 +18,18 @@ class Empleado(db.Model, UserMixin):
     usuario = db.Column(db.String(15), unique=True, nullable=False)
     contrasena = db.Column(db.String(255), nullable=False)
     temporal = db.Column(db.Boolean, default=True)
-    activo = db.Column(db.Boolean, default=True)  # NUEVO: para deshabilitar usuarios
-    reset_token = db.Column(db.String(100))  # NUEVO: token recuperación contraseña
-    reset_token_expiry = db.Column(db.DateTime)  # NUEVO: expiración token
-    aceptado_terminos = db.Column(db.Boolean, default=False)  # NUEVO: términos y condiciones
+    activo = db.Column(db.Boolean, default=True)
+    
+    # NUEVOS CAMPOS PARA CONFIRMACIÓN DE EMAIL
+    email_confirmado = db.Column(db.Boolean, default=False)
+    token_confirmacion = db.Column(db.String(100))
+    token_confirmacion_expiry = db.Column(db.DateTime)
+    
+    # Recuperación de contraseña
+    reset_token = db.Column(db.String(100))
+    reset_token_expiry = db.Column(db.DateTime)
+    
+    aceptado_terminos = db.Column(db.Boolean, default=False)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relaciones
@@ -33,7 +41,6 @@ class Empleado(db.Model, UserMixin):
     sesiones_activas = db.relationship("SesionActiva", back_populates="empleado", lazy=True)
     acciones_auditoria = db.relationship("Auditoria", back_populates="empleado", lazy=True)
 
-    # Flask-Login
     def get_id(self):
         return str(self.id_empleados)
 
@@ -47,11 +54,11 @@ class Empleado(db.Model, UserMixin):
 
     @property
     def confirmado(self):
-        return not self.temporal
+        return self.email_confirmado
 
     @property
     def is_active(self):
-        return self.activo
+        return self.activo and self.email_confirmado
 
     def __repr__(self):
         return f'<Empleado {self.nombre_empleado} {self.apellido_empleado}>'
@@ -66,9 +73,29 @@ class Empleado(db.Model, UserMixin):
     def is_locked(self):
         return not self.activo
 
+    # NUEVO: Generar token de confirmación de email
+    def generate_confirmation_token(self):
+        """Generar token para confirmar email"""
+        self.token_confirmacion = secrets.token_urlsafe(32)
+        self.token_confirmacion_expiry = datetime.utcnow() + timedelta(hours=24)
+        return self.token_confirmacion
+
+    # NUEVO: Verificar token de confirmación
+    def verify_confirmation_token(self, token):
+        """Verificar token de confirmación de email"""
+        if self.token_confirmacion == token and self.token_confirmacion_expiry > datetime.utcnow():
+            return True
+        return False
+
+    # NUEVO: Confirmar email
+    def confirmar_email(self):
+        """Marcar email como confirmado"""
+        self.email_confirmado = True
+        self.token_confirmacion = None
+        self.token_confirmacion_expiry = None
+
     def generate_reset_token(self):
         """Generar token de recuperación de contraseña"""
-        from datetime import timedelta
         self.reset_token = secrets.token_urlsafe(32)
         self.reset_token_expiry = datetime.utcnow() + timedelta(hours=1)
         return self.reset_token
@@ -81,7 +108,7 @@ class Empleado(db.Model, UserMixin):
 
 
 class SesionActiva(db.Model):
-    """NUEVO: Tabla para rastrear sesiones activas"""
+    """Tabla para rastrear sesiones activas"""
     __tablename__ = 'sesiones_activas'
     id_sesion = db.Column(db.Integer, primary_key=True)
     id_empleados = db.Column(db.Integer, db.ForeignKey('empleado.id_empleados'), nullable=False)
@@ -96,30 +123,37 @@ class SesionActiva(db.Model):
 
 
 class Auditoria(db.Model):
-    """NUEVO: Tabla de auditoría para rastrear cambios"""
+    """Tabla de auditoría para rastrear cambios"""
     __tablename__ = 'auditoria'
     id_auditoria = db.Column(db.Integer, primary_key=True)
     id_empleados = db.Column(db.Integer, db.ForeignKey('empleado.id_empleados'))
-    accion = db.Column(db.String(50))  # CREATE, UPDATE, DELETE
-    tabla = db.Column(db.String(50))  # nombre de la tabla afectada
-    registro_id = db.Column(db.Integer)  # ID del registro afectado
-    datos_anteriores = db.Column(db.Text)  # JSON con datos antes del cambio
-    datos_nuevos = db.Column(db.Text)  # JSON con datos después del cambio
+    accion = db.Column(db.String(50))
+    tabla = db.Column(db.String(50))
+    registro_id = db.Column(db.Integer)
+    datos_anteriores = db.Column(db.Text)
+    datos_nuevos = db.Column(db.Text)
     fecha_hora = db.Column(db.DateTime, default=datetime.utcnow)
     ip_address = db.Column(db.String(45))
     
     empleado = db.relationship("Empleado", back_populates="acciones_auditoria")
 
 
+# models.py - SECCIÓN DE TANQUE CORREGIDA
+
 class Tanque(db.Model):
     __tablename__ = 'tanques'
     id_tanques = db.Column(db.Integer, primary_key=True)
     tipo_combustible = db.Column(db.String(45))
     capacidad = db.Column(db.Integer)
-    activo = db.Column(db.Boolean, default=True)  # NUEVO: para desactivar tanques
+    activo = db.Column(db.Boolean, default=True)
     fecha_creacion = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Altura máxima permitida en cm
+    altura_maxima_cm = db.Column(db.Float, default=0.0)
+    
+    # Radio del tanque en cm
+    radio_cm = db.Column(db.Float, default=125.0)
 
-    # Relaciones
     mediciones_cargue = db.relationship("MedicionCargue", back_populates="tanque", lazy=True)
     registro_medidas = db.relationship("RegistroMedida", back_populates="tanque", lazy=True)
     ventas = db.relationship("Venta", back_populates="tanque", lazy=True)
@@ -130,26 +164,83 @@ class Tanque(db.Model):
 
     @property
     def capacidad_gal(self):
-        return self.capacidad
+        return self.capacidad or 0
 
     @property
     def contenido(self):
+        """Obtener contenido actual del tanque en galones"""
         ultima_medicion = RegistroMedida.query.filter_by(
             id_tanques=self.id_tanques
         ).order_by(RegistroMedida.fecha_hora_registro.desc()).first()
-        return ultima_medicion.galones if ultima_medicion else 0
+        
+        if ultima_medicion and ultima_medicion.galones:
+            return float(ultima_medicion.galones)
+        return 0.0
 
     @property
+    def altura_actual_cm(self):
+        """Obtener altura actual en cm basada en última medición"""
+        ultima_medicion = RegistroMedida.query.filter_by(
+            id_tanques=self.id_tanques
+        ).order_by(RegistroMedida.fecha_hora_registro.desc()).first()
+        
+        if not ultima_medicion or not ultima_medicion.medida_combustible:
+            return 0.0
+        
+        try:
+            return float(ultima_medicion.medida_combustible)
+        except (ValueError, TypeError):
+            return 0.0
+
+    @property
+    def porcentaje_llenado(self):
+        """Porcentaje de llenado del tanque"""
+        capacidad = self.capacidad or 0
+        contenido = self.contenido or 0
+        
+        if capacidad > 0:
+            return (contenido / capacidad) * 100
+        return 0.0
+    
+    @property
     def volumen_m3(self):
-        return round(self.capacidad * 3.78541 / 1000, 2) if self.capacidad else 0
+        """Volumen en metros cúbicos"""
+        capacidad = self.capacidad or 0
+        return round(capacidad * 3.78541 / 1000, 2)
 
     @property
     def diametro_m(self):
-        return 2.5
+        """Diámetro en metros"""
+        radio_cm = self.radio_cm or 125.0
+        return (radio_cm * 2) / 100
 
     @property
     def altura_m(self):
-        return 4.6
+        """Altura máxima en metros"""
+        altura_maxima = self.altura_maxima_cm or 0.0
+        return altura_maxima / 100
+
+    def validar_medicion(self, medida_cm):
+        """Validar que una medición no exceda la altura máxima"""
+        altura_max = self.altura_maxima_cm or 0
+        if medida_cm > altura_max:
+            return False, f"Medida excede altura máxima del tanque ({altura_max} cm)"
+        return True, "OK"
+
+    def cm_a_galones(self, altura_cm):
+        """Convertir altura en cm a galones para este tanque específico"""
+        radio = self.radio_cm or 125.0
+        if radio <= 0:
+            return 0
+        
+        # Volumen = π * r² * h
+        area_base = 3.14159 * (radio ** 2)
+        volumen_cm3 = area_base * altura_cm
+        
+        # 1 galón = 3785.411784 cm³
+        galones = volumen_cm3 / 3785.411784
+        
+        return round(galones, 2)
 
     def __repr__(self):
         return f'<Tanque {self.tipo_combustible} - {self.capacidad} gal>'
@@ -185,7 +276,7 @@ class Descargue(db.Model):
     solidos = db.Column(db.String(5))
     separacion = db.Column(db.String(50))
     fecha = db.Column(db.Date)
-    imagen_path = db.Column(db.String(255))  # NUEVO: ruta de la imagen de factura
+    imagen_path = db.Column(db.String(255))
 
     def __repr__(self):
         return f'<Descargue {self.tanque} - {self.fecha}>'
@@ -231,7 +322,7 @@ class RegistroMedida(db.Model):
     id_tanques = db.Column(db.Integer, db.ForeignKey('tanques.id_tanques'))
     novedad = db.Column(db.String(255))
     tipo_medida = db.Column(db.String(30), default='rutinario')
-    imagen_path = db.Column(db.String(255))  # NUEVO: ruta de la imagen de factura
+    imagen_path = db.Column(db.String(255))
 
     empleado = db.relationship("Empleado", back_populates="registro_medidas")
     tanque = db.relationship("Tanque", back_populates="registro_medidas")
