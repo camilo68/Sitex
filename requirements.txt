@@ -18,3 +18,4 @@ email-validator==2.2.0
 pandas==2.2.3          # Versión mínima con soporte completo para Python 3.13
 openpyxl==3.1.5
 xlsxwriter==3.2.0
+psycopg2-binary==2.9.10
