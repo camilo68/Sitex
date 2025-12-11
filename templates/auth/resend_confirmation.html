@@ -34,21 +34,25 @@
                     </div>
 
                     <form method="POST">
-    {{ form.hidden_tag() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    
     <div class="mb-3">
-                            <input type="email" 
-                                   class="form-control form-control-lg" 
-                                   id="email" 
-                                   name="email" 
-                                   placeholder="ejemplo@correo.com" 
-                                   required>
-                        </div>
+        <label for="email" class="form-label">Email *</label>
+        <input type="email" 
+               class="form-control form-control-lg" 
+               id="email" 
+               name="email" 
+               placeholder="ejemplo@correo.com" 
+               required>
+    </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="bi bi-send"></i> Reenviar Email
-                            </button>
-                        </div>
+    <div class="d-grid">
+        <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-send"></i> Reenviar Email
+        </button>
+    </div>
+    <!-- resto del código -->
+</form>
 
                         <div class="text-center mt-3">
                             <a href="{{ url_for('auth.login') }}">
