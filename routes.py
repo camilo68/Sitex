@@ -189,26 +189,36 @@ def register():
         return redirect(url_for("auth.login"))
     return render_template("auth/register.html", form=form)
 
-# NUEVO: Ruta para confirmar email
+# Implementación única y consolidada para confirmar email y reenviar confirmación
+
 @auth_bp.route("/confirm/<token>")
 def confirm_email(token):
     empleado = Empleado.query.filter_by(token_confirmacion=token).first()
-    if not empleado and empleado.verify_confirmation_token(token):
-        empleado.confirmar_email()
-        db.session.commit()
-        flash("Email confirmado. ¡Ya puedes iniciar sesión!", "success")
-    else:
-        flash("Token inválido o expirado", "danger")
+    if not empleado:
+        flash("Token de confirmación inválido", "danger")
+        return redirect(url_for("auth.login"))
+
+    # verify_confirmation_token debería devolver True si el token es válido
+    if not empleado.verify_confirmation_token(token):
+        flash("El token de confirmación ha expirado. Solicita un nuevo email de confirmación.", "danger")
+        return redirect(url_for("auth.resend_confirmation"))
+
+    empleado.confirmar_email()
+    db.session.commit()
+    registrar_auditoria('CONFIRM_EMAIL', 'empleado', empleado.id_empleados, None, {'email_confirmado': True})
+    flash("¡Email confirmado exitosamente! Ya puedes iniciar sesión.", "success")
     return redirect(url_for("auth.login"))
+
 
 @auth_bp.route("/resend_confirmation", methods=["GET", "POST"])
 def resend_confirmation():
     if request.method == "POST":
         email = request.form.get("email")
         empleado = Empleado.query.filter_by(email=email).first()
+
         if empleado:
             if empleado.email_confirmado:
-                flash("Este email ya está confirmado", "info")
+                flash("Este email ya ha sido confirmado", "info")
                 return redirect(url_for("auth.login"))
             token = empleado.generate_confirmation_token()
             db.session.commit()
@@ -217,7 +227,6 @@ def resend_confirmation():
         else:
             flash("Si el email existe, recibirás un enlace", "info")
     return render_template("auth/resend_confirmation.html")
-
 @auth_bp.route("/request_reset", methods=["GET", "POST"])
 def request_password_reset():
     form = RequestPasswordResetForm()
