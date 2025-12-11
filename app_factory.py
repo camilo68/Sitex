@@ -99,10 +99,12 @@
 #     return app
 
 # app_factory.py → Versión 100% compatible con Render (PostgreSQL)
+# app_factory.py - VERSIÓN CORREGIDA PARA RENDER
 import os
 from flask import Flask
 from extensions import db, login_manager, migrate, csrf, mail
 from dotenv import load_dotenv
+
 load_dotenv()
 
 def create_app():
@@ -111,7 +113,7 @@ def create_app():
     # SECRET KEY
     app.config['SECRET_KEY'] = os.environ.get('SESSION_SECRET', 'cambia-esta-clave-en-produccion-ya')
 
-    # BASE DE DATOS – SOPORTE POSTGRESQL DE RENDER
+    # BASE DE DATOS - RENDER POSTGRESQL
     database_url = os.environ.get('DATABASE_URL')
     if database_url:
         # Render da postgres:// → SQLAlchemy necesita postgresql://
@@ -120,7 +122,7 @@ def create_app():
         app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     else:
         # Desarrollo local
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitex.db'  # o tu MySQL local
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///sitex.db'
 
     app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
         'pool_pre_ping': True,
@@ -128,17 +130,21 @@ def create_app():
     }
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # Correo y resto de config (sin cambios)
+    # Configuración de correo
     app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
     app.config['MAIL_USE_TLS'] = os.environ.get('MAIL_USE_TLS', 'True').lower() == 'true'
     app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
-    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@tudominio.com')
+    app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@hayuelos.com')
 
+    # Carpeta de uploads
     app.config['UPLOAD_FOLDER'] = 'static/uploads'
     app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
     app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif', 'pdf'}
+
+    # Crear carpeta de uploads si no existe
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
     # Inicializar extensiones
     db.init_app(app)
@@ -146,7 +152,6 @@ def create_app():
     migrate.init_app(app, db)
     csrf.init_app(app)
     mail.init_app(app)
-    migrate.init_app(app, db)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'
@@ -168,16 +173,16 @@ def create_app():
     app.register_blueprint(medicion_bp)
     app.register_blueprint(admin_bp)
 
-    # ¡¡IMPORTANTE EN PRODUCCIÓN!!
-    # QUITAMOS db.create_all() y los datos iniciales del arranque
-    # Solo ejecutamos migraciones una vez con: flask db upgrade
+    # 🔥 CORRECCIÓN: No ejecutar migraciones automáticamente
+    # Solo crear tablas si estamos en desarrollo local
     with app.app_context():
-        from flask_migrate import upgrade
-        try:
-            upgrade()  # Aplica todas las migraciones pendientes
-            app.logger.info("Migraciones aplicadas correctamente")
-        except Exception as e:
-            app.logger.warning(f"No se pudieron aplicar migraciones automáticamente: {e}")
+        if not database_url or 'sqlite' in app.config['SQLALCHEMY_DATABASE_URI']:
+            # Solo en desarrollo local
+            app.logger.info("⚠️ Modo desarrollo: Creando tablas con db.create_all()")
+            db.create_all()
+        else:
+            # En producción, las migraciones se ejecutan manualmente
+            app.logger.info("✅ Modo producción: Base de datos conectada")
 
     @app.after_request
     def set_secure_headers(response):
