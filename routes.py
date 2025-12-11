@@ -227,6 +227,7 @@ def resend_confirmation():
         else:
             flash("Si el email existe, recibirás un enlace", "info")
     return render_template("auth/resend_confirmation.html")
+    
 @auth_bp.route("/request_reset", methods=["GET", "POST"])
 def request_password_reset():
     form = RequestPasswordResetForm()
