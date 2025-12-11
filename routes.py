@@ -189,6 +189,7 @@ def register():
         return redirect(url_for("auth.login"))
     return render_template("auth/register.html", form=form)
 
+# NUEVO: Ruta para confirmar email
 @auth_bp.route("/confirm/<token>")
 def confirm_email(token):
     empleado = Empleado.query.filter_by(token_confirmacion=token).first()
