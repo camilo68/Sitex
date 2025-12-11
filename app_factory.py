@@ -146,6 +146,7 @@ def create_app():
     migrate.init_app(app, db)
     csrf.init_app(app)
     mail.init_app(app)
+    migrate.init_app(app, db)
 
     login_manager.login_view = 'auth.login'
     login_manager.login_message = 'Por favor inicie sesión para acceder a esta página.'

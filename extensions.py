@@ -5,12 +5,14 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from flask_mail import Mail
 from sqlalchemy.orm import DeclarativeBase
+from flask_migrate import Migrate
 
 class Base(DeclarativeBase):
     pass
 
 # Inicializar extensiones
 db = SQLAlchemy(model_class=Base)
+migrate = Migrate()
 login_manager = LoginManager()
 migrate = Migrate()
 csrf = CSRFProtect()
