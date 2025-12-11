@@ -195,8 +195,4 @@ Contacto
   - añadir un archivo de CONTRIBUTING.md,
   - crear plantillas de issues/PRs,
   - o abrir un PR que añada este README directamente al repo.
-
-He ampliado la documentación del proyecto con pasos detallados de instalación, configuración, ejecución y despliegue. Si quieres, puedo ahora:
-- crear un `.env.example` y un `CONTRIBUTING.md`,
-- o abrir un pull request en el repo con este README ya incluido — dime si quieres que lo haga y con qué rama objetivo (por defecto usaría `main`).
 ```
