@@ -27,7 +27,14 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 # ============= FUNCIONES AUXILIARES =============
 def enviar_email_confirmacion(empleado, token):
-    """Enviar email de confirmación al registrarse"""
+    """Enviar email de confirmación al registrarse - CON MANEJO DE ERRORES"""
+    
+    # Verificar si las credenciales de email están configuradas
+    from flask import current_app
+    if not current_app.config.get('MAIL_USERNAME') or not current_app.config.get('MAIL_PASSWORD'):
+        print("⚠️ Credenciales de email no configuradas. Email no enviado.")
+        return False
+    
     confirm_url = url_for('auth.confirm_email', token=token, _external=True)
     contrasena_temp = empleado.numero_documento[-4:] if len(empleado.numero_documento) >= 4 else empleado.numero_documento
     
@@ -53,6 +60,7 @@ Si no te registraste en Hayuelos, ignora este correo.
 Saludos,
 Sistema Hayuelos - "Y También vendemos combustible"
 """
+    
     msg.html = f"""
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
@@ -85,7 +93,15 @@ Sistema Hayuelos - "Y También vendemos combustible"
     </body>
     </html>
     """
-    mail.send(msg)
+    
+    try:
+        mail.send(msg)
+        print(f"✅ Email enviado exitosamente a {empleado.email}")
+        return True
+    except Exception as e:
+        print(f"❌ Error al enviar email: {str(e)}")
+        # No lanzar excepción, solo registrar el error
+        return False
 
 def calcular_altura_maxima(capacidad_galones):
     """Calcular altura máxima en cm basada en capacidad del tanque"""
@@ -181,23 +197,26 @@ def register():
             contrasena=hash_cifrado,
             temporal=True,
             activo=True,
-            email_confirmado=False,  # NUEVO
+            email_confirmado=False,
             aceptado_terminos=form.aceptar_terminos.data
         )
         
-        # NUEVO: Generar token de confirmación
+        # Generar token de confirmación
         token = nuevo_empleado.generate_confirmation_token()
         
         db.session.add(nuevo_empleado)
         db.session.commit()
         
-        # NUEVO: Enviar email de confirmación
-        try:
-            enviar_email_confirmacion(nuevo_empleado, token)
+        # Intentar enviar email (sin bloquear si falla)
+        email_enviado = enviar_email_confirmacion(nuevo_empleado, token)
+        
+        if email_enviado:
             flash(f"¡Registro exitoso! Se ha enviado un email de confirmación a {nuevo_empleado.email}.", "success")
-        except Exception as e:
-            flash(f"Usuario creado, pero hubo un error al enviar el email. Contacte al administrador.", "warning")
-            print(f"Error enviando email: {e}")
+        else:
+            # Email no configurado - permitir login directo
+            nuevo_empleado.email_confirmado = True
+            db.session.commit()
+            flash(f"Usuario creado exitosamente. Usuario: {nuevo_empleado.usuario}, Contraseña temporal: {contrasena_temporal}", "success")
         
         registrar_auditoria('CREATE', 'empleado', nuevo_empleado.id_empleados, None, {
             'usuario': nuevo_empleado.usuario,
