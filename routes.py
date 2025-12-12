@@ -213,20 +213,39 @@ def confirm_email(token):
 @auth_bp.route("/resend_confirmation", methods=["GET", "POST"])
 def resend_confirmation():
     if request.method == "POST":
+        # ✅ Agregar verificación CSRF manual
+        from flask_wtf.csrf import validate_csrf
+        from wtforms import ValidationError
+        
+        try:
+            validate_csrf(request.form.get('csrf_token'))
+        except ValidationError:
+            flash("Token CSRF inválido. Intenta de nuevo.", "danger")
+            return render_template("auth/resend_confirmation.html")
+        
         email = request.form.get("email")
         empleado = Empleado.query.filter_by(email=email).first()
-
+        
         if empleado:
             if empleado.email_confirmado:
                 flash("Este email ya ha sido confirmado", "info")
                 return redirect(url_for("auth.login"))
+            
+            # Generar nuevo token
             token = empleado.generate_confirmation_token()
             db.session.commit()
-            enviar_email_confirmacion(empleado, token)
-            flash("Email de confirmación reenviado", "success")
+            
+            try:
+                enviar_email_confirmacion(empleado, token)
+                flash("Se ha enviado un nuevo email de confirmación", "success")
+            except Exception as e:
+                flash(f"Error al enviar el email. Contacte al administrador.", "danger")
+                print(f"Error: {e}")
         else:
-            flash("Si el email existe, recibirás un enlace", "info")
+            flash("Si el email existe en nuestro sistema, recibirás un enlace de confirmación", "info")
+    
     return render_template("auth/resend_confirmation.html")
+    
     
 @auth_bp.route("/request_reset", methods=["GET", "POST"])
 def request_password_reset():
