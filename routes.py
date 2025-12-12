@@ -191,39 +191,42 @@ def register():
 
 # Implementación única y consolidada para confirmar email y reenviar confirmación
 
+# ============= CONFIRMACIÓN DE EMAIL =============
+
 @auth_bp.route("/confirm/<token>")
 def confirm_email(token):
+    """Confirmar email con token"""
     empleado = Empleado.query.filter_by(token_confirmacion=token).first()
+    
     if not empleado:
         flash("Token de confirmación inválido", "danger")
         return redirect(url_for("auth.login"))
-
-    # verify_confirmation_token debería devolver True si el token es válido
+    
     if not empleado.verify_confirmation_token(token):
         flash("El token de confirmación ha expirado. Solicita un nuevo email de confirmación.", "danger")
         return redirect(url_for("auth.resend_confirmation"))
-
+    
     empleado.confirmar_email()
     db.session.commit()
-    registrar_auditoria('CONFIRM_EMAIL', 'empleado', empleado.id_empleados, None, {'email_confirmado': True})
+    
+    registrar_auditoria('CONFIRM_EMAIL', 'empleado', empleado.id_empleados, None, {
+        'email_confirmado': True
+    })
+    
     flash("¡Email confirmado exitosamente! Ya puedes iniciar sesión.", "success")
     return redirect(url_for("auth.login"))
 
 
 @auth_bp.route("/resend_confirmation", methods=["GET", "POST"])
 def resend_confirmation():
+    """Reenviar email de confirmación"""
     if request.method == "POST":
-        # ✅ Agregar verificación CSRF manual
-        from flask_wtf.csrf import validate_csrf
-        from wtforms import ValidationError
+        email = request.form.get("email")
         
-        try:
-            validate_csrf(request.form.get('csrf_token'))
-        except ValidationError:
-            flash("Token CSRF inválido. Intenta de nuevo.", "danger")
+        if not email:
+            flash("Debe proporcionar un email", "danger")
             return render_template("auth/resend_confirmation.html")
         
-        email = request.form.get("email")
         empleado = Empleado.query.filter_by(email=email).first()
         
         if empleado:
@@ -239,9 +242,10 @@ def resend_confirmation():
                 enviar_email_confirmacion(empleado, token)
                 flash("Se ha enviado un nuevo email de confirmación", "success")
             except Exception as e:
-                flash(f"Error al enviar el email. Contacte al administrador.", "danger")
-                print(f"Error: {e}")
+                flash("Error al enviar el email. Contacte al administrador.", "danger")
+                print(f"Error enviando email: {e}")
         else:
+            # Por seguridad, no revelar si el email existe o no
             flash("Si el email existe en nuestro sistema, recibirás un enlace de confirmación", "info")
     
     return render_template("auth/resend_confirmation.html")
