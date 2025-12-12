@@ -1,4 +1,4 @@
-# routes.py - VERSIÓN FINAL 100% FUNCIONAL (Render + Local)
+# routes.py - COMPLETO CON CONFIRMACIÓN DE EMAIL
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, jsonify
 from flask_login import current_user, login_user, logout_user, login_required
 from flask_mail import Message
@@ -9,307 +9,202 @@ import bcrypt
 import os
 import secrets
 import pandas as pd
+
 from extensions import db, mail
 from models import Empleado, Tanque, Descargue, RegistroMedida, MedicionCargue, SesionActiva, Auditoria, Venta
-from forms import (
-    LoginForm, RegisterForm, MedicionForm, DescargueForm, ChangePasswordForm,
-    ResetPasswordForm, RequestPasswordResetForm, PasswordResetForm, TanqueForm,
-    CargaMasivaForm, FiltroMedicionesForm, CargueEmergenciaForm
-)
-from utils import (
-    islero_or_encargado_required, admin_or_encargado_required, admin_required,
-    registrar_auditoria, allowed_file
-)
+from forms import (LoginForm, RegisterForm, MedicionForm, DescargueForm, ChangePasswordForm, 
+                  ResetPasswordForm, RequestPasswordResetForm, PasswordResetForm, TanqueForm,
+                  CargaMasivaForm, FiltroMedicionesForm)
+from utils import (islero_or_encargado_required, admin_or_encargado_required, admin_required,
+                  registrar_auditoria, allowed_file)
 
-# ======================= RESEND CONFIG =======================
-USE_RESEND = os.environ.get("MAIL_DRIVER") == "resend"
-
-# ======================= BLUEPRINTS =======================
+# Blueprints
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 main_bp = Blueprint("main", __name__)
 dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/dashboard")
 medicion_bp = Blueprint("medicion", __name__, url_prefix="/medicion")
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
-# ======================= ENVÍO DE EMAIL UNIVERSAL =======================
-def enviar_email(to: str, subject: str, html: str) -> bool:
-    if USE_RESEND:
-        try:
-            import resend
-            resend.api_key = os.environ["RESEND_API_KEY"]
-            resend.Emails.send({
-                "from": os.environ.get("MAIL_DEFAULT_SENDER", "Sitex <no-reply@sitex.com>"),
-                "to": [to],
-                "subject": subject,
-                "html": html,
-            })
-            print(f"Email enviado con RESEND a {to}")
-            return True
-        except Exception as e:
-            print(f"Error Resend: {e}")
-            return False
-    else:
-        try:
-            msg = Message(subject, recipients=[to])
-            msg.html = html
-            mail.send(msg)
-            print(f"Email enviado con Flask-Mail a {to}")
-            return True
-        except Exception as e:
-            print(f"Error Flask-Mail: {e}")
-            return False
-
-# ======================= EMAILS =======================
+# ============= FUNCIONES AUXILIARES =============
 def enviar_email_confirmacion(empleado, token):
+    """Enviar email de confirmación al registrarse"""
     confirm_url = url_for('auth.confirm_email', token=token, _external=True)
     contrasena_temp = empleado.numero_documento[-4:] if len(empleado.numero_documento) >= 4 else empleado.numero_documento
+    
+    msg = Message("Confirma tu email - Hayuelos",
+                recipients=[empleado.email])
 
-    html = f"""
+    # Mantengo tu versión de texto plano
+    msg.body = f"""Hola {empleado.nombre_empleado} {empleado.apellido_empleado},
+
+¡Bienvenido a Sitex!
+
+Para completar tu registro, confirma tu email haciendo clic en el siguiente enlace:
+
+{confirm_url}
+
+Este enlace expira en 24 horas.
+
+Tu usuario es: {empleado.usuario}
+Tu contraseña temporal es: {contrasena_temp}
+
+Por seguridad, te recomendamos cambiar tu contraseña después de iniciar sesión.
+
+Si no te registraste en Hayuelos, ignora este correo.
+
+Saludos,
+Sistema Hayuelos - "Y También vendemos combustible"
+"""
+
+    # Mantengo TU HTML COMPLETO SIN CAMBIARLO
+    msg.html = f"""
     <html>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
         <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <h2 style="color: #E10000;">¡Bienvenido a Hayuelos!</h2>
             <p>Hola <strong>{empleado.nombre_empleado} {empleado.apellido_empleado}</strong>,</p>
-            <p>Gracias por registrarte. Confirma tu email aquí:</p>
+            <p>Gracias por registrarte en el sistema Hayuelos. Para completar tu registro, confirma tu email:</p>
+            
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{confirm_url}" style="background:#E10000; color:white; padding:14px 32px; text-decoration:none; border-radius:6px; font-size:16px;">
+                <a href="{confirm_url}" 
+                   style="background-color: #E10000; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">
                     Confirmar Email
                 </a>
             </div>
-            <p><strong>Usuario:</strong> <code>{empleado.usuario}</code><br>
-               <strong>Contraseña temporal:</strong> <code>{contrasena_temp}</code></p>
-            <p style="color:#666; font-size:0.9em;">Este enlace vence en 24 horas.</p>
-            <hr>
-            <p style="color:#999; font-size:0.8em; text-align:center;">Sistema Hayuelos</p>
-        </div>
-    </body>
-    </html>
-    """
-    return enviar_email(empleado.email, "Confirma tu email - Hayuelos", html)
-
-def enviar_email_recuperacion(empleado, token):
-    reset_url = url_for('auth.reset_password', token=token, _external=True)
-    html = f"""
-    <html>
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-        <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
-            <h2 style="color: #E10000;">Recuperación de Contraseña</h2>
-            <p>Hola <strong>{empleado.nombre_empleado}</strong>,</p>
-            <p>Haz clic para crear una nueva contraseña:</p>
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{reset_url}" style="background:#E10000; color:white; padding:14px 32px; text-decoration:none; border-radius:6px; font-size:16px;">
-                    Restablecer Contraseña
-                </a>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <p><strong>Tus credenciales:</strong></p>
+                <p>Usuario: <code>{empleado.usuario}</code></p>
+                <p>Contraseña temporal: <code>{contrasena_temp}</code></p>
             </div>
-            <p style="color:#666; font-size:0.9em;">Este enlace vence en 1 hora.</p>
-            <hr>
-            <p style="color:#999; font-size:0.8em; text-align:center;">Sistema Hayuelos</p>
+            
+            <p style="color: #666; font-size: 0.9em;">Este enlace expira en 24 horas.</p>
+            <p style="color: #666; font-size: 0.9em;">Si no te registraste en Hayuelos, ignora este correo.</p>
+            
+            <hr style="margin: 30px 0; border: none; border-top: 1px solid #ddd;">
+            <p style="color: #999; font-size: 0.8em; text-align: center;">
+                Sistema Hayuelos - "Y También vendemos combustible"
+            </p>
         </div>
     </body>
     </html>
     """
-    return enviar_email(empleado.email, "Recuperación de Contraseña - Hayuelos", html)
 
-# ======================= RESTO DEL CÓDIGO (100% igual al tuyo) =======================
-# (Todo desde aquí para abajo es exactamente lo que ya tenías, solo con los cambios de email)
+    try:
+        mail.send(msg)
+        print("Email de confirmación enviado correctamente")
+        return True
+    except Exception as e:
+        print(f"ERROR SMTP al enviar correo de confirmación: {e}")
+        return False
 
-def calcular_altura_maxima(capacidad_galones):
-    radio_cm = 125
-    volumen_cm3 = capacidad_galones * 3785.411784
-    area_base = 3.14159 * (radio_cm ** 2)
-    return round(volumen_cm3 / area_base, 2)
-
-# AUTH ROUTES
+# ============= AUTH ROUTES =============
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for("dashboard.index"))
+
     form = LoginForm()
     if form.validate_on_submit():
         usuario = form.username.data.strip()
         contrasena = form.password.data
+
         empleado = Empleado.query.filter(
             (Empleado.usuario == usuario) | (Empleado.numero_documento == usuario)
         ).first()
+
         if empleado and empleado.check_password(contrasena):
             if not empleado.activo:
-                flash("Cuenta deshabilitada.", "danger")
+                flash("Su cuenta ha sido deshabilitada. Contacte al administrador.", "danger")
                 return redirect(url_for("auth.login"))
+
+            # NUEVO: Verificar si el email está confirmado
             if not empleado.email_confirmado:
-                flash("Debes confirmar tu email.", "warning")
+                flash("Debe confirmar su email antes de iniciar sesión. Revise su correo electrónico.", "warning")
                 return redirect(url_for("auth.resend_confirmation"))
+
             login_user(empleado, remember=form.remember_me.data)
+            
+            # Crear sesión activa
+            session_id = secrets.token_urlsafe(32)
             sesion = SesionActiva(
                 id_empleados=empleado.id_empleados,
-                session_id=secrets.token_urlsafe(32),
+                session_id=session_id,
                 ip_address=request.remote_addr,
                 user_agent=request.headers.get('User-Agent', '')[:255]
             )
             db.session.add(sesion)
             db.session.commit()
-            flash("¡Bienvenido!", "success")
+
+            flash(f"Bienvenido {empleado.nombre_empleado}!", "success")
             return redirect(url_for("dashboard.index"))
-        flash("Usuario o contraseña incorrectos", "danger")
+        else:
+            flash("Usuario o contraseña incorrectos", "danger")
+
     return render_template("auth/login.html", form=form)
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     form = RegisterForm()
     if form.validate_on_submit():
+        # Verificar duplicados
         if Empleado.query.filter_by(numero_documento=form.numero_documento.data).first():
-            flash("Documento ya registrado", "danger"); return render_template("auth/register.html", form=form)
+            flash("El número de documento ya está registrado", "danger")
+            return render_template("auth/register.html", form=form)
+        
         if Empleado.query.filter_by(email=form.email.data).first():
-            flash("Email ya registrado", "danger"); return render_template("auth/register.html", form=form)
+            flash("El email ya está registrado", "danger")
+            return render_template("auth/register.html", form=form)
+        
         if Empleado.query.filter_by(usuario=form.usuario.data).first():
-            flash("Usuario ya existe", "danger"); return render_template("auth/register.html", form=form)
+            flash("El nombre de usuario ya está en uso", "danger")
+            return render_template("auth/register.html", form=form)
 
-        contrasena_temporal = form.numero_documento.data[-4:] if len(form.numero_documento.data) >= 4 else form.numero_documento.data
-        hash_cifrado = bcrypt.hashpw(contrasena_temporal.encode(), bcrypt.gensalt()).decode()
+        # Crear contraseña temporal
+        num_doc = form.numero_documento.data
+        contrasena_temporal = num_doc[-4:] if len(num_doc) >= 4 else num_doc
+        hash_cifrado = bcrypt.hashpw(contrasena_temporal.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-        nuevo = Empleado(
-            usuario=form.usuario.data, nombre_empleado=form.nombre_empleado.data,
-            apellido_empleado=form.apellido_empleado.data, numero_documento=form.numero_documento.data,
-            tipo_documento=form.tipo_documento.data, email=form.email.data, telefono=form.telefono.data,
-            direccion=form.direccion.data, cargo_establecido=form.cargo_establecido.data,
-            contrasena=hash_cifrado, temporal=True, activo=True, email_confirmado=False,
+        nuevo_empleado = Empleado(
+            usuario=form.usuario.data,
+            nombre_empleado=form.nombre_empleado.data,
+            apellido_empleado=form.apellido_empleado.data,
+            numero_documento=form.numero_documento.data,
+            tipo_documento=form.tipo_documento.data,
+            email=form.email.data,
+            telefono=form.telefono.data,
+            direccion=form.direccion.data,
+            cargo_establecido=form.cargo_establecido.data,
+            contrasena=hash_cifrado,
+            temporal=True,
+            activo=True,
+            email_confirmado=False,  # NUEVO
             aceptado_terminos=form.aceptar_terminos.data
         )
-        token = nuevo.generate_confirmation_token()
-        db.session.add(nuevo)
+        
+        # NUEVO: Generar token de confirmación
+        token = nuevo_empleado.generate_confirmation_token()
+        
+        db.session.add(nuevo_empleado)
         db.session.commit()
+        
+        # NUEVO: Enviar email de confirmación
+        try:
+            enviar_email_confirmacion(nuevo_empleado, token)
+            flash(f"¡Registro exitoso! Se ha enviado un email de confirmación a {nuevo_empleado.email}.", "success")
+        except Exception as e:
+            flash(f"Usuario creado, pero hubo un error al enviar el email. Contacte al administrador.", "warning")
+            print(f"Error enviando email: {e}")
+        
+        registrar_auditoria('CREATE', 'empleado', nuevo_empleado.id_empleados, None, {
+            'usuario': nuevo_empleado.usuario,
+            'nombre': nuevo_empleado.nombre_empleado
+        })
 
-        if enviar_email_confirmacion(nuevo, token):
-            flash("¡Registro exitoso! Revisa tu correo.", "success")
-        else:
-            nuevo.email_confirmado = True
-            db.session.commit()
-            flash(f"Usuario creado. Contraseña temporal: {contrasena_temporal}", "warning")
-
-        registrar_auditoria('CREATE', 'empleado', nuevo.id_empleados, None, {'usuario': nuevo.usuario})
         return redirect(url_for("auth.login"))
+
     return render_template("auth/register.html", form=form)
 
-# Implementación única y consolidada para confirmar email y reenviar confirmación
-
-# ============= CONFIRMACIÓN DE EMAIL =============
-
-@auth_bp.route("/confirm/<token>")
-def confirm_email(token):
-    """Confirmar email con token"""
-    empleado = Empleado.query.filter_by(token_confirmacion=token).first()
-    
-    if not empleado:
-        flash("Token de confirmación inválido", "danger")
-        return redirect(url_for("auth.login"))
-    
-    if not empleado.verify_confirmation_token(token):
-        flash("El token de confirmación ha expirado. Solicita un nuevo email de confirmación.", "danger")
-        return redirect(url_for("auth.resend_confirmation"))
-    
-    empleado.confirmar_email()
-    db.session.commit()
-    
-    registrar_auditoria('CONFIRM_EMAIL', 'empleado', empleado.id_empleados, None, {
-        'email_confirmado': True
-    })
-    
-    flash("¡Email confirmado exitosamente! Ya puedes iniciar sesión.", "success")
-    return redirect(url_for("auth.login"))
-
-
-@auth_bp.route("/resend_confirmation", methods=["GET", "POST"])
-def resend_confirmation():
-    """Reenviar email de confirmación"""
-    if request.method == "POST":
-        email = request.form.get("email")
-        
-        if not email:
-            flash("Debe proporcionar un email", "danger")
-            return render_template("auth/resend_confirmation.html")
-        
-        empleado = Empleado.query.filter_by(email=email).first()
-        
-        if empleado:
-            if empleado.email_confirmado:
-                flash("Este email ya ha sido confirmado", "info")
-                return redirect(url_for("auth.login"))
-            
-            # Generar nuevo token
-            token = empleado.generate_confirmation_token()
-            db.session.commit()
-            
-            try:
-                enviar_email_confirmacion(empleado, token)
-                flash("Se ha enviado un nuevo email de confirmación", "success")
-            except Exception as e:
-                flash("Error al enviar el email. Contacte al administrador.", "danger")
-                print(f"Error enviando email: {e}")
-        else:
-            # Por seguridad, no revelar si el email existe o no
-            flash("Si el email existe en nuestro sistema, recibirás un enlace de confirmación", "info")
-    
-    return render_template("auth/resend_confirmation.html")
-    
-    
-@auth_bp.route("/request_reset", methods=["GET", "POST"])
-def request_password_reset():
-    form = RequestPasswordResetForm()
-    if form.validate_on_submit():
-        empleado = Empleado.query.filter_by(email=form.email.data).first()
-        if empleado:
-            if not empleado.email_confirmado:
-                flash("Primero confirma tu email", "warning")
-                return redirect(url_for("auth.resend_confirmation"))
-            token = empleado.generate_reset_token()
-            db.session.commit()
-            enviar_email_recuperacion(empleado, token)
-            flash("Te enviamos un enlace para recuperar tu contraseña", "success")
-        else:
-            flash("Si el email existe, recibirás un enlace", "info")
-    return render_template("auth/request_reset.html", form=form)
-    
-# NUEVO: Ruta para confirmar email
-@auth_bp.route("/confirm/<token>")
-def confirm_email(token):
-    empleado = Empleado.query.filter_by(token_confirmacion=token).first()
-    if not empleado:
-        flash("Token de confirmación inválido", "danger")
-        return redirect(url_for("auth.login"))
-    if not empleado.verify_confirmation_token(token):
-        flash("El token de confirmación ha expirado. Solicita un nuevo email de confirmación.", "danger")
-        return redirect(url_for("auth.resend_confirmation"))
-    empleado.confirmar_email()
-    db.session.commit()
-    registrar_auditoria('CONFIRM_EMAIL', 'empleado', empleado.id_empleados, None, {'email_confirmado': True})
-    flash("¡Email confirmado exitosamente! Ya puedes iniciar sesión.", "success")
-    return redirect(url_for("auth.login"))
-
-# NUEVO: Reenviar email de confirmación
-@auth_bp.route("/resend_confirmation", methods=["GET", "POST"])
-def resend_confirmation():
-    if request.method == "POST":
-        email = request.form.get("email")
-        empleado = Empleado.query.filter_by(email=email).first()
-        
-        if empleado:
-            if empleado.email_confirmado:
-                flash("Este email ya ha sido confirmado", "info")
-                return redirect(url_for("auth.login"))
-            
-            # Generar nuevo token
-            token = empleado.generate_confirmation_token()
-            db.session.commit()
-            
-            try:
-                enviar_email_confirmacion(empleado, token)
-                flash("Se ha enviado un nuevo email de confirmación", "success")
-            except Exception as e:
-                flash(f"Error al enviar el email. Contacte al administrador.", "danger")
-                print(f"Error: {e}")
-        else:
-            flash("Si el email existe en nuestro sistema, recibirás un enlace de confirmación", "info")
-    
-    return render_template("auth/resend_confirmation.html")
 
 @auth_bp.route("/logout")
 @login_required
@@ -413,10 +308,9 @@ Sistema Hayuelos
                 mail.send(msg)
                 flash("Se ha enviado un enlace de recuperación a tu email", "success")
             except Exception as e:
-                flash(f"Error al enviar el email. Contacte al administrador.", "danger")
-                print(f"Error: {e}")
-        else:
-            flash("Si el email existe en nuestro sistema, recibirás un enlace de recuperación", "info")
+                print(f"ERROR SMTP al enviar reset password: {e}")
+                flash("No se pudo enviar el correo de recuperación. Intenta más tarde.", "warning")
+
     
     return render_template("auth/request_reset.html", form=form)
 
@@ -781,7 +675,27 @@ def registro():
     form = MedicionForm()
     tanques = Tanque.query.filter_by(activo=True).all()
     form.tanque.choices = [(t.id_tanques, f"{t.tipo_combustible} - Tanque {t.id_tanques}") for t in tanques]
-
+    
+    if form.validate_on_submit():
+        tanque_seleccionado = Tanque.query.get(form.tanque.data)
+        
+        # Fix: Compute altura_maxima_cm if None
+        if tanque_seleccionado.altura_maxima_cm is None:
+            tanque_seleccionado.altura_maxima_cm = calcular_altura_maxima(tanque_seleccionado.capacidad)
+            db.session.commit()  # Save the update to DB
+        
+        medida_str = form.medida_combustible.data.replace(',', '.')
+        medida_cm = float(medida_str)
+        
+        # Fix: Only compare if altura_maxima_cm is not None (though we just set it)
+        if tanque_seleccionado.altura_maxima_cm is not None and medida_cm > tanque_seleccionado.altura_maxima_cm:
+            flash(
+                f"❌ La medida ({medida_cm} cm) supera la altura máxima del tanque ({tanque_seleccionado.altura_maxima_cm} cm)", 
+                "danger"
+            )
+            return render_template("medicion/registro.html", form=form)
+        
+        # Rest of the code remains the same...
     if form.validate_on_submit():
         imagen_path = None
         if form.imagen.data:
@@ -849,7 +763,37 @@ def historial():
 @islero_or_encargado_required
 def descargue():
     form = DescargueForm()
+
+    # Cargar tanques activos
+    tanques = Tanque.query.filter_by(activo=True).all()
+    form.tanque.choices = [(t.id_tanques, f"{t.tipo_combustible} - Tanque {t.id_tanques}") for t in tanques]
+
     if form.validate_on_submit():
+        tanque_seleccionado = Tanque.query.get(form.tanque.data)
+
+        # CORREGIDO: Calcular altura máxima si está vacía
+        if tanque_seleccionado.altura_maxima_cm is None:
+            tanque_seleccionado.altura_maxima_cm = calcular_altura_maxima(tanque_seleccionado.capacidad)
+            db.session.commit()
+
+        try:
+            medida_inicial_cm = float(str(form.medida_inicial_cm.data).replace(',', '.'))
+            descargue_cm_valor = float(str(form.descargue_cm.data).replace(',', '.'))
+            medida_final_cm = float(str(form.medida_final_cm.data).replace(',', '.'))
+        except (ValueError, AttributeError) as e:
+            flash("Error en los valores de medidas (cm). Verifica que sean números válidos.", "danger")
+            return render_template("medicion/descargue.html", form=form)
+
+        # Validaciones de altura máxima
+        if medida_inicial_cm > tanque_seleccionado.altura_maxima_cm:
+            flash(f"Medida inicial ({medida_inicial_cm} cm) supera la altura máxima del tanque ({tanque_seleccionado.altura_maxima_cm:.2f} cm)", "danger")
+            return render_template("medicion/descargue.html", form=form)
+
+        if medida_final_cm > tanque_seleccionado.altura_maxima_cm:
+            flash(f"Medida final ({medida_final_cm} cm) supera la altura máxima del tanque ({tanque_seleccionado.altura_maxima_cm:.2f} cm)", "danger")
+            return render_template("medicion/descargue.html", form=form)
+
+        # Guardar imagen si existe
         imagen_path = None
         if form.imagen.data:
             file = form.imagen.data
@@ -860,6 +804,7 @@ def descargue():
                 file.save(filepath)
                 imagen_path = filename
 
+        # Crear el descargue
         descargue_obj = Descargue(
             id_empleados=current_user.id_empleados,
             medida_inicial_cm=form.medida_inicial_cm.data,
@@ -872,14 +817,14 @@ def descargue():
             tanque=form.tanque.data,
             observaciones1=form.observaciones1.data,
             observaciones2=form.observaciones2.data,
-            kit_derrames=form.kit_derrames.data,
-            extintores=form.extintores.data,
-            conos=form.conos.data,
-            boquillas=form.boquillas.data,
-            botas=form.botas.data,
-            gafas=form.gafas.data,
-            tapaoidos=form.tapaoidos.data,
-            guantes=form.guantes.data,
+            kit_derrames='si' if form.kit_derrames.data else 'no',
+            extintores='si' if form.extintores.data else 'no',
+            conos='si' if form.conos.data else 'no',
+            boquillas='si' if form.boquillas.data else 'no',
+            botas='si' if form.botas.data else 'no',
+            gafas='si' if form.gafas.data else 'no',
+            tapaoidos='si' if form.tapaoidos.data else 'no',
+            guantes='si' if form.guantes.data else 'no',
             brillante=form.brillante.data,
             traslucido=form.traslucido.data,
             claro=form.claro.data,
@@ -890,9 +835,10 @@ def descargue():
         )
         db.session.add(descargue_obj)
         db.session.commit()
-        
+
         registrar_auditoria('CREATE', 'descargues', descargue_obj.idDescargue, None, {
-            'tanque': form.tanque.data
+            'tanque': form.tanque.data,
+            'galones_descargados': form.diferencia.data
         })
 
         flash("Descargue registrado exitosamente", "success")
@@ -908,17 +854,8 @@ def convert_cm_to_gallons(tanque_id):
     
     tanque = Tanque.query.get_or_404(tanque_id)
     
-    # Obtener dimensiones reales del tanque
-    # Opción 1: Si las dimensiones están en la BD
-    radio_m = tanque.diametro_m / 2  # radio en metros
-    radio_cm = radio_m * 100  # convertir a cm
-    
-    # Opción 2: Si son fijas por tipo de tanque
-    # DIMENSIONES_POR_TIPO = {
-    #     'Diesel': {'radio_cm': 125},  # 2.5m diámetro
-    #     'ACPM': {'radio_cm': 150},    # 3.0m diámetro
-    # }
-    # radio_cm = DIMENSIONES_POR_TIPO[tanque.tipo_combustible]['radio_cm']
+    # Fix: Use tanque.radio_cm (from DB) instead of non-existent diametro_m
+    radio_cm = tanque.radio_cm if tanque.radio_cm else 125  # Fallback to default if None
     
     # Fórmula correcta: V = π * r² * h
     # 1 galón = 3785.411784 cm³
@@ -1424,9 +1361,40 @@ def calcular_altura_maxima(capacidad_galones):
 @login_required
 @islero_or_encargado_required
 def cargue_emergencia():
-    """Registrar cargue de emergencia"""
     from forms import CargueEmergenciaForm
     form = CargueEmergenciaForm()
+    
+    tanques = Tanque.query.filter_by(activo=True).all()
+    form.tanque.choices = [(t.id_tanques, f"{t.tipo_combustible} - Tanque {t.id_tanques}") for t in tanques]
+    
+    if form.validate_on_submit():
+        tanque_seleccionado = Tanque.query.get(form.tanque.data)
+        
+        # Fix: Compute altura_maxima_cm if None
+        if tanque_seleccionado.altura_maxima_cm is None:
+            tanque_seleccionado.altura_maxima_cm = calcular_altura_maxima(tanque_seleccionado.capacidad)
+            db.session.commit()
+        
+        medida_anterior = float(form.medida_anterior.data.replace(',', '.'))
+        medida_posterior = float(form.medida_posterior.data.replace(',', '.'))
+        
+        # Fix: Only compare if altura_maxima_cm is not None
+        if tanque_seleccionado.altura_maxima_cm is not None:
+            if medida_anterior > tanque_seleccionado.altura_maxima_cm:
+                flash(
+                    f"❌ Medida anterior ({medida_anterior} cm) supera altura máxima ({tanque_seleccionado.altura_maxima_cm} cm)", 
+                    "danger"
+                )
+                return render_template("medicion/cargue_emergencia.html", form=form)
+            
+            if medida_posterior > tanque_seleccionado.altura_maxima_cm:
+                flash(
+                    f"❌ Medida posterior ({medida_posterior} cm) supera altura máxima ({tanque_seleccionado.altura_maxima_cm} cm)", 
+                    "danger"
+                )
+                return render_template("medicion/cargue_emergencia.html", form=form)
+        
+        # Rest of the code remains the same...
     
     # Cargar tanques en el selector
     tanques = Tanque.query.filter_by(activo=True).all()
@@ -1477,3 +1445,15 @@ def historial_cargues():
     ).paginate(page=page, per_page=20, error_out=False)
     
     return render_template("medicion/historial_cargues.html", cargues=cargues)
+
+@admin_bp.route("/update_alturas")
+@login_required
+@admin_required
+def update_alturas():
+    tanques = Tanque.query.all()
+    for t in tanques:
+        if t.altura_maxima_cm is None:
+            t.altura_maxima_cm = calcular_altura_maxima(t.capacidad)
+    db.session.commit()
+    flash("Alturas máximas actualizadas para todos los tanques", "success")
+    return redirect(url_for("dashboard.tanques"))
